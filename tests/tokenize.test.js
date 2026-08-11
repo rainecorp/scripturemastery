@@ -124,30 +124,63 @@ eq(ALL.length, 100, "100 passages loaded");
   eq(disagree, [], "study index === arena index === wordCount, for all 100 passages");
 }
 
-/* the seven that used to disagree, pinned to the corrected count */
-section("the seven known divergences");
-const KNOWN = {
-  "Joseph Smith—History 1:15–20": 503,
-  "D&C 19:16–19":  89,
-  "D&C 58:42–43":  40,
-  "D&C 64:9–11":   75,
-  "D&C 76:22–24":  80,
-  "D&C 121:34–36": 74,
-  "D&C 130:20–21": 40
-};
-Object.entries(KNOWN).forEach(([ref, expected]) => {
-  const v = ALL.find(x => x.ref === ref);
-  if(!v){ fail++; failures.push(`missing passage ${ref}`); return; }
-  eq(wordCount(v.text), expected, `${ref} counts ${expected} words (the em dash is not one)`);
+/* Free-standing punctuation is not a word.
 
-  /* the old splitter counted every whitespace-delimited chunk, so it was over
-     by exactly the number of free-standing dashes. Derive that rather than
-     assuming one — D&C 19:16–19 has two. */
-  const strays = v.text.trim().split(/\s+/).filter(w => !/[\p{L}\p{N}]/u.test(w));
-  ok(strays.length > 0, `${ref} does contain ${strays.length} free-standing dash(es)`);
-  eq(v.text.trim().split(/\s+/).length, expected + strays.length,
-     `${ref}: the old splitter counted ${expected + strays.length} — that was the bug`);
-});
+   HISTORY, because this section changed shape twice. T3 found seven passages
+   where the study screen and the arena disagreed about the word count, all
+   for one reason: the text contained a SPACED dash (" — "), which the old
+   naive splitter counted as a word. These tests originally pinned those seven
+   passages by name.
+
+   T4 then compared every passage against the edition and found that the
+   spaced dashes were never in the scripture at all — they were a
+   transcription defect in our own data. The edition sets those dashes closed
+   up ("faith—faith"). Correcting the text removed every free-standing dash
+   from the corpus, so pinning the seven by name became a test that asserted
+   our data was still wrong.
+
+   So the contract is now tested on fixtures, where it belongs, and the corpus
+   gets an invariant instead. */
+section("free-standing punctuation is not a word");
+{
+  const cases = [
+    ["a — b",                    2, 1],
+    ["a—b",                      1, 0],   // closed up: one token, no stray
+    ["spirit — and would that",  4, 1],
+    ["spirit—and would that",    3, 0],
+    ["one — two — three",        3, 2],
+    ["- leading dash",           2, 1],
+    ["trailing dash -",          2, 1]
+  ];
+  cases.forEach(([text, words, strays])=>{
+    eq(wordCount(text), words, `"${text}" counts ${words} word(s)`);
+    eq(tokenize(text).filter(t=>!t.isSpace && !t.isWord).length, strays,
+       `"${text}" has ${strays} non-word token(s)`);
+    /* the bug this replaced: the old splitter counted every chunk */
+    eq(text.trim().split(/\s+/).length, words + strays,
+       `"${text}": the old splitter would have said ${words + strays}`);
+  });
+}
+
+/* Corpus invariant, and a regression guard for the T4 corrections: a spaced
+   dash in a passage means someone has reintroduced the transcription defect.
+   If a future custom passage legitimately needs one, the tokenizer handles it
+   — this guards the shipped 100, not the tokenizer. */
+{
+  const spaced = ALL.filter(v => /\s[—–-]\s/.test(v.text)).map(v => v.ref);
+  eq(spaced, [], "no shipped passage contains a spaced dash (T4 corrected all 16)");
+  const strays = ALL.filter(v => v.text.trim().split(/\s+/)
+                                  .some(w => !/[\p{L}\p{N}]/u.test(w))).map(v => v.ref);
+  eq(strays, [], "no shipped passage has a whitespace-delimited chunk without a letter or digit");
+}
+
+/* With no stray chunks left, the naive splitter and the tokenizer now agree
+   on all 100 — which is the same fact stated from the other side. */
+{
+  const disagree = ALL.filter(v => v.text.trim().split(/\s+/).length !== wordCount(v.text))
+                      .map(v => v.ref);
+  eq(disagree, [], "naive split and wordCount now agree on all 100 passages");
+}
 
 /* indices must be usable as stable keys: same text, same answer, every time */
 section("stability");
@@ -214,10 +247,15 @@ eq(spanByWords("a b c", 9, 12), "", "out-of-range span yields empty");
   eq(lost, [], "spans at several step sizes rejoin to the original text, for all 100 passages");
 }
 
-/* every em-dash passage keeps its dash through a span partition */
+/* Every em-dash passage keeps its dash through a span partition.
+
+   The corpus dashes are closed up now ("faith—faith"), so they ride inside a
+   word token rather than standing alone — but that is the easy case. The hard
+   case, a dash that is its own token, is the one spanByWords can silently
+   drop, so it is covered by fixtures below as well as by the corpus here. */
 {
-  const dashed = ALL.filter(v => / — /.test(v.text));
-  eq(dashed.length, 7, "seven passages contain a free-standing em dash");
+  const dashed = ALL.filter(v => /—/.test(v.text));
+  ok(dashed.length > 0, `${dashed.length} shipped passages contain an em dash`);
   const dropped = dashed.filter(v=>{
     const clean = v.text.replace(/\s+/g," ").trim();
     const n = wordCount(clean);
@@ -230,11 +268,26 @@ eq(spanByWords("a b c", 9, 12), "", "out-of-range span yields empty");
   eq(dropped, [], "no em dash is lost when text is cut into spans");
 }
 
+/* A free-standing dash must survive a span partition. No shipped passage has
+   one any more, so this is a fixture — but T11 lets people write their own
+   passages, and dropping their punctuation would be silent corruption. */
+{
+  const text = "the greatest of all — and would that I might not drink the bitter cup — nevertheless glory be";
+  const n = wordCount(text);
+  [3,5,7].forEach(step=>{
+    const parts = [];
+    for(let i=0;i<n;i+=step) parts.push(spanByWords(text, i, Math.min(i+step, n)));
+    eq((parts.join(" ").match(/—/g)||[]).length, 2, `both lone dashes survive a step=${step} partition`);
+    eq(parts.join(" "), text, `step=${step} spans rejoin to the original`);
+  });
+}
+
 /* displayTokens keeps punctuation-only tokens; tokenWords does not */
 {
+  const text = "one — two three";
+  ok(displayTokens(text).some(t=>t.raw==="—"), "displayTokens keeps the lone dash");
+  ok(!tokenWords(text).some(t=>t.raw==="—"), "tokenWords drops the lone dash");
   const v = ALL.find(x => x.ref === "D&C 121:34–36");
-  ok(displayTokens(v.text).some(t=>t.raw==="—"), "displayTokens keeps the lone dash");
-  ok(!tokenWords(v.text).some(t=>t.raw==="—"), "tokenWords drops the lone dash");
   eq(displayTokens(v.text).filter(t=>t.isWord).length, wordCount(v.text),
      "display stream and word count agree on how many words there are");
 }

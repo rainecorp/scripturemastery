@@ -1,23 +1,49 @@
-# Text review — the 18 passages that differ from the current edition
+# Text review — the 2026-08-11 edition diff
 
-Generated 2026-08-11 by comparing every passage in `data/passages.js` against its
-own chapter page on churchofjesuschrist.org. 82 of 100 matched **character for
-character** and are recorded in `data/text-sources.js`. These 18 did not.
+Every passage in `data/passages.js` was compared against its own chapter page
+on churchofjesuschrist.org, which the project owner confirmed is the edition
+this app ships. **82 of 100 matched character for character. 16 were wrong and
+have been corrected. 2 turned out to be right after all.**
 
-**Nothing here has been applied.** The comparison is mediated by a summarizing
-model, so a mismatch is evidence, not proof — and silently rewriting scripture
-from an automated diff is the exact failure this whole system exists to
-prevent. Each entry below needs a human to look at the passage and decide.
+All 100 now carry a provenance record in `data/text-sources.js` and render a
+green "Verified text" line in Study.
 
-Until an entry is resolved, its passage carries no record in
-`data/text-sources.js` and the Study screen tells the reader its source is
-unverified. That is working as intended.
+## How this was checked, and why that matters
 
-`-` is what the app currently shows. `+` is what the current edition has.
+Two methods, and the difference between them caught a real error:
+
+1. **Text fetch** of each chapter page, through a summarizing model. Fast,
+   and good enough for 79 passages.
+2. **The page's own rendered text**, read directly out of the DOM. Slower,
+   byte-accurate, no model in the loop. Used for the 21 passages on the 17
+   pages where anything looked wrong.
+
+Method 1 was **silently normalizing curly apostrophes to straight ones**. On
+the strength of that alone, D&C 84:33–39 and D&C 130:22–23 looked like they
+had the wrong apostrophe. Method 2 showed the page uses U+2019 and our text
+was already correct. Had those "corrections" been applied automatically, the
+result would have been two passages made wrong by the process meant to make
+them right — and then certified as verified.
+
+That is the whole argument for not auto-applying an automated diff, and for
+recording in each entry's `by` field *how* it was checked.
+
+**Trust order, highest first:** a person reading a printed edition · the
+page's own text · a text fetch of the page. Upgrade an entry when you can;
+never downgrade one silently.
+
+## Effect on gameplay
+
+None. All 16 corrections left their passage inside the same word-count band,
+so no difficulty tier and no relic metal changed.
 
 ---
 
-## Class E · text is missing
+# What was corrected
+
+`-` is what the app used to show. `+` is what it shows now.
+
+## Class E · missing text — **1 passage, corrected**
 
 ### Joseph Smith—History 1:15–20
 
@@ -32,23 +58,11 @@ unverified. That is working as intended.
 + other—This
 - right, and
 + right (for at this time it had never entered into my heart that all were wrong)—and
-- “they
-+ "they
-- thereof.”
-+ thereof."
-- “Never
-+ "Never
 - well — I
-+ well—I
-- off.”
-+ off."
-- “I
-+ "I
-- true.”
-+ true." It seems as though the adversary was aware, at a very early period of my life, that I was destined to prove a disturber and an annoyer of his kingdom; else why should the powers of darkness combine against me? Why the opposition and persecution that arose against me, almost in my infancy?
++ well—I It seems as though the adversary was aware, at a very early period of my life, that I was destined to prove a disturber and an annoyer of his kingdom; else why should the powers of darkness combine against me? Why the opposition and persecution that arose against me, almost in my infancy?
 ```
 
-## Class A · modernized KJV wording
+## Class A · modernized KJV wording — **5 passages, corrected**
 
 ### Genesis 39:9
 
@@ -72,18 +86,12 @@ unverified. That is working as intended.
 + manservant,
 - female servant,
 + maidservant,
-- neighbour’s
-+ neighbour's
-- neighbour’s
-+ neighbour's
 - male servant,
 + manservant,
 - female servant,
 + maidservant,
 - anything
 + any thing
-- neighbour’s.
-+ neighbour's.
 ```
 
 ### Malachi 3:8–10
@@ -113,7 +121,7 @@ unverified. That is working as intended.
 + fulness
 ```
 
-## Class B · em dash flattened
+## Class B · em dash flattened — **9 passages, corrected**
 
 ### 2 Nephi 28:7–9
 
@@ -198,7 +206,7 @@ unverified. That is working as intended.
 + predicated—
 ```
 
-## Class C · editorial brackets dropped
+## Class C · editorial brackets dropped — **1 passage, corrected**
 
 ### D&C 131:1–4
 
@@ -211,23 +219,9 @@ unverified. That is working as intended.
 + marriage];
 ```
 
-## Class D · apostrophe shape — cannot tell from here
+## Class D · apostrophe shape — **2 passages, no change needed**
 
-### D&C 84:33–39
-
-674 → 674 characters.
-
-```diff
-- Father’s
-+ Father's
-```
-
-### D&C 130:22–23
-
-300 → 300 characters.
-
-```diff
-- man’s;
-+ man's;
-```
-
+**D&C 84:33–39** and **D&C 130:22–23**. The text fetch reported `man's` and
+`Father's` with a straight ASCII apostrophe where our text has the curly
+U+2019. Reading the page directly showed U+2019 in both places: the fetch was
+normalizing, our text was correct. Both are now verified by page text.
