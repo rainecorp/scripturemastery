@@ -26,63 +26,12 @@ function trialSnippet(text, words){
   return spanByWords(text, 0, n) + (total > n ? " …" : "");
 }
 
-const ARENA_DIFF = {
-  easy:   {key:"easy",   label:"Easy",   emoji:"😌", options:3, timer:40, hintFree:true},
-  normal: {key:"normal", label:"Normal", emoji:"🙂", options:3, timer:25, hintFree:false},
-  hard:   {key:"hard",   label:"Hard",   emoji:"🥵", options:4, timer:15, hintFree:false}
-};
-const ARENA_TYPES = ["text2ref","ref2text","theme2ref","finishVerse","buildVerse","fillBlank","findError","fullRecitation","timedRecall","wordScramble","pairMatch"];
-const ARENA_TYPE_LABEL = {
-  text2ref:"Reference Match", ref2text:"First Words", theme2ref:"Keyword Match",
-  finishVerse:"Finish the Verse", buildVerse:"Build the Verse", fillBlank:"Fill in the Blank",
-  findError:"Find the Error", fullRecitation:"Full Recitation", timedRecall:"Timed Recall",
-  wordScramble:"Untangle the Verse", pairMatch:"Match the Pairs"
-};
-const ARENA_ACHIEVEMENTS = [
-  {id:"first_session",  emoji:"🌱", name:"Scripture Seeker",   desc:"Complete your first Arena session"},
-  {id:"streak10",       emoji:"🔥", name:"Verse Builder",      desc:"Ten correct answers in a row"},
-  {id:"perfect",        emoji:"✨", name:"Iron Rod Disciple",  desc:"A perfect Arena session"},
-  {id:"all_books",      emoji:"🛡️", name:"Scripture Defender", desc:"Practiced scriptures from every book"},
-  {id:"recite_no_hints",emoji:"🎤", name:"Master Reciter",     desc:"Recited a memorized scripture without hints"},
-  {id:"book_area",      emoji:"📖", name:"Keeper of the Word", desc:"Completed one Book Mastery area"},
-  {id:"book_mastery",   emoji:"🏆", name:"Arena Champion",     desc:"Completed an entire Book Mastery Challenge"},
-  {id:"grand_mastery",  emoji:"👑", name:"Scripture Master",   desc:"Completed the Grand Scripture Challenge"},
-  {id:"mastered25",     emoji:"🥉", name:"25 Mastered",        desc:"Mastered 25 scriptures"},
-  {id:"mastered50",     emoji:"🥈", name:"50 Mastered",        desc:"Mastered 50 scriptures"},
-  {id:"mastered100",    emoji:"🥇", name:"100 Mastered",       desc:"Mastered 100 scriptures"},
-  {id:"blitz_ace",      emoji:"⚡", name:"Lightning Ace",      desc:"15 correct in one Lightning Round"}
-];
-const ARENA_TITLES = [
-  [0,"Scripture Seeker"],[2,"Verse Builder"],[4,"Iron Rod Disciple"],[6,"Scripture Defender"],
-  [8,"Master Reciter"],[9,"Keeper of the Word"],[10,"Arena Champion"],[11,"Scripture Master"]
-];
-const ARENA_HEART_MAX = 3;
 function arenaTitleFor(count){
   let t = ARENA_TITLES[0][1];
   ARENA_TITLES.forEach(([n,name])=>{ if(count>=n) t=name; });
   return t;
 }
 
-/* ---- Arena Quests: three rotating daily challenges, rewarded with a
-   chest-badge on the Quest Shelf. Progress is tracked live as the
-   player answers questions and finishes sessions. ---- */
-const ARENA_QUEST_POOL = [
-  {id:"ref_hunter",   name:"Reference Ranger", desc:"Answer 5 Reference Match questions correctly", track:"type", type:"text2ref",     goal:5, emoji:"🧭", chest:4},
-  {id:"first_words",  name:"Quick Starter",    desc:"Answer 5 First Words questions correctly",      track:"type", type:"ref2text",     goal:5, emoji:"🏁", chest:4},
-  {id:"keyword",      name:"Keyword Hunter",   desc:"Answer 5 Keyword Match questions correctly",     track:"type", type:"theme2ref",    goal:5, emoji:"🔑", chest:4},
-  {id:"finisher",     name:"Verse Finisher",   desc:"Finish the Verse correctly 5 times",             track:"type", type:"finishVerse",  goal:5, emoji:"🏹", chest:4},
-  {id:"builder",      name:"Verse Builder",    desc:"Correctly place 8 sections in Build the Verse",  track:"buildStep", type:"buildVerse", goal:8, emoji:"🧩", chest:9},
-  {id:"blanker",      name:"Blank Filler",     desc:"Fill in the Blank correctly 5 times",            track:"type", type:"fillBlank",    goal:5, emoji:"✏️", chest:4},
-  {id:"detective",    name:"Error Spotter",    desc:"Find the Error correctly 5 times",               track:"type", type:"findError",    goal:5, emoji:"🕵️", chest:9},
-  {id:"reciter",      name:"Bold Reciter",     desc:"Complete a Full Recitation successfully",        track:"type", type:"fullRecitation",goal:1, emoji:"🎤", chest:14},
-  {id:"clockbeater",  name:"Clock Beater",     desc:"Beat 3 Timed Recall questions",                  track:"type", type:"timedRecall",   goal:3, emoji:"⏱️", chest:9},
-  {id:"regular",      name:"Arena Regular",    desc:"Complete 3 Arena sessions today",                track:"session", goal:3, emoji:"⚔️", chest:9},
-  {id:"flawless",     name:"Flawless Victory", desc:"Finish a session with 100% accuracy",            track:"perfect", goal:1, emoji:"✨", chest:19},
-  {id:"onfire",       name:"On Fire",          desc:"Reach a combo streak of 8 in one session",       track:"streak", goal:8, emoji:"🔥", chest:14},
-  {id:"untangler",    name:"Thread Weaver",    desc:"Untangle 3 scrambled verses",                    track:"type", type:"wordScramble", goal:3, emoji:"🧵", chest:9},
-  {id:"matchmaker",   name:"Pair Matcher",     desc:"Win 3 Match the Pairs rounds",                   track:"type", type:"pairMatch",    goal:3, emoji:"🎴", chest:9},
-  {id:"lightning",    name:"Lightning Legend", desc:"Get 10 correct in one Lightning Round",          track:"blitz", goal:10, emoji:"⚡", chest:19}
-];
 function ensureArenaQuests(a){
   const today = todayStr();
   if(!a.quests || a.quests.date !== today){
@@ -318,9 +267,6 @@ function poolForMode(mode){
   if(mode.kind==="grand") return grandAreas()[mode.area];
   return [];
 }
-const QUEST_ROUND_LEN = {fullRecitation:3, buildVerse:4, wordScramble:5, pairMatch:4};
-const BLITZ_TYPES = ["text2ref","ref2text","theme2ref","fillBlank","finishVerse"];
-const BLITZ_SECONDS = 60;
 function makeArenaRound(mode){
   const a = ensureArena();
   const diffCfg = ARENA_DIFF[a.difficulty];
@@ -520,14 +466,7 @@ function chunkVerseOptions(q){ return q.options; }
 SQ.shuffleArr = shuffleArr;
 SQ.trialPool = trialPool;
 SQ.trialSnippet = trialSnippet;
-SQ.ARENA_DIFF = ARENA_DIFF;
-SQ.ARENA_TYPES = ARENA_TYPES;
-SQ.ARENA_TYPE_LABEL = ARENA_TYPE_LABEL;
-SQ.ARENA_ACHIEVEMENTS = ARENA_ACHIEVEMENTS;
-SQ.ARENA_TITLES = ARENA_TITLES;
-SQ.ARENA_HEART_MAX = ARENA_HEART_MAX;
 SQ.arenaTitleFor = arenaTitleFor;
-SQ.ARENA_QUEST_POOL = ARENA_QUEST_POOL;
 SQ.ensureArenaQuests = ensureArenaQuests;
 SQ.questDef = questDef;
 SQ.bumpArenaQuests = bumpArenaQuests;
@@ -546,9 +485,6 @@ SQ.pickRandomWord = pickRandomWord;
 SQ.scrambleLeadIn = scrambleLeadIn;
 SQ.buildArenaQuestion = buildArenaQuestion;
 SQ.poolForMode = poolForMode;
-SQ.QUEST_ROUND_LEN = QUEST_ROUND_LEN;
-SQ.BLITZ_TYPES = BLITZ_TYPES;
-SQ.BLITZ_SECONDS = BLITZ_SECONDS;
 SQ.makeArenaRound = makeArenaRound;
 SQ.startQuestRound = startQuestRound;
 SQ.unlockArenaAchievement = unlockArenaAchievement;

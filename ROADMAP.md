@@ -432,7 +432,10 @@ scripture-tower/
   css/   01-base 02-towers 03-ceremony 04-pages 05-arena
          06-ui-v2 07-arena-v2 08-responsive
   data/  passages.js                 the DATA literal (T9 splits it per track)
-  js/    00-namespace     SQ = the one global
+  js/    00-namespace     SQ = the one global — must load first
+         00-config        every tunable number: intervals, ranks, milestones,
+                          difficulty bands, the whole Arena table
+         00-tokenize      ★ the canonical tokenizer (T3)
          01-catalog       VOLUME_ORDER, VERSES build, difficulty tiers
          02-towers-data   TOWERS, RELICS
          03-state         climber, STORE_KEY, load/persist/save, migrations, streak
@@ -456,9 +459,11 @@ scripture-tower/
   tools/ split-from-baseline.py   how T2 was produced; --verify proves verbatim
 ```
 
-**Files T3+ will add:** `tokenize.js` (T3) · `recall.js` (T5) · `learning.js` (T13) · `entitlement.js` (T20) · per-track `data/passages.*` (T9–T12) · `fixtures/`.
+**Files still to come:** `recall.js` (T5) · `learning.js` (T13) · `entitlement.js` (T20) · per-track `data/passages.*` (T9–T12) · `fixtures/`. Tier 00 is "depends on nothing" and is where pure logic goes; new pure modules belong there, not wedged into a numbered slot.
 
-**Two deviations from the pre-split guess, both deliberate.** CSS is eight files, not five, because the boundaries had to fall on existing section banners to keep the cascade byte-identical — grouping by theme would have meant reordering rules. And `config.js` was not extracted, because the constants it would hold (`DAY`, `REVIEW_LADDER`, `RANKS`, `ARENA_*`, `TIER_TRIMS`) are scattered across five original sections; gathering them is a *move*, and T2 allows no moves. Do it in T3 as its own reviewable commit.
+**One deviation from the pre-split guess, deliberate.** CSS is eight files, not five, because the boundaries had to fall on existing section banners to keep the cascade byte-identical — grouping by theme would have meant reordering rules.
+
+`config.js` was held back from T2 for the same reason (gathering scattered constants is a *move*, and T2 allowed none) and **shipped after T3 as `js/00-config.js`** — 20 constants out of five files, verified as a pure move: every declaration byte-identical, 83 of 84 fingerprints unchanged with `_meta.scripts` the only mover.
 
 ### 7.3 Procedure — follow exactly
 

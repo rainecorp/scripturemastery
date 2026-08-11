@@ -49,12 +49,6 @@ function nextReviewText(p){
   return d === 1 ? "Re-seal in 1 day" : `Re-seal in ${d} days`;
 }
 
-/* =========================================================
-   RANKS
-   ========================================================= */
-const RANKS = [
-  [0,"Seeker"],[150,"Scribe"],[400,"Record Keeper"],[900,"Guardian"],[1800,"Sentinel"],[3200,"Keeper of the Word"]
-];
 function rankFor(xp){
   let r = RANKS[0][1];
   RANKS.forEach(([t,n])=>{ if(xp>=t) r=n; });
@@ -69,5 +63,4 @@ SQ.isDue = isDue;
 SQ.sealCondition = sealCondition;
 SQ.dueReviews = dueReviews;
 SQ.nextReviewText = nextReviewText;
-SQ.RANKS = RANKS;
 SQ.rankFor = rankFor;

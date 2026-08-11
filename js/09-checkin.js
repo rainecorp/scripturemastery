@@ -24,13 +24,6 @@ function currentStreakStart(){
   const today = new Date(); today.setHours(12,0,0,0);
   return addLocalDays(today, -Math.max(0,(state.streak||1)-1));
 }
-const CHECKIN_MILESTONES = [
-  {day:3,  icon:"🧰", short:"Momentum", copy:"Three sparks become a flame"},
-  {day:7,  icon:"🛡️", short:"Shield", copy:"One full week protected"},
-  {day:14, icon:"🎁", short:"Treasure", copy:"Two weeks of steady return"},
-  {day:21, icon:"👑", short:"Crown", copy:"A strong rhythm is forming"},
-  {day:28, icon:"🏆", short:"Grand chest", copy:"Four weeks faithfully built"}
-];
 function journeyDays(n=28){
   const start = currentStreakStart();
   const todayIso = localISODate();
@@ -54,7 +47,6 @@ SQ.claimDailyGift = claimDailyGift;
 SQ.isoForDate = isoForDate;
 SQ.addLocalDays = addLocalDays;
 SQ.currentStreakStart = currentStreakStart;
-SQ.CHECKIN_MILESTONES = CHECKIN_MILESTONES;
 SQ.journeyDays = journeyDays;
 SQ.currentJourneyWeek = currentJourneyWeek;
 SQ.nextJourneyReward = nextJourneyReward;

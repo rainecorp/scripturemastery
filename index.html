@@ -35,8 +35,12 @@
      single-file build, and it is load-bearing: 03-state.js runs
      its migrations at load, 24-boot.js calls render(). Do not
      reorder these tags without reading ROADMAP.md §7.
+
+     Tier 00 is "depends on nothing". Within it, 00-namespace
+     must still come first — the other two register onto SQ.
      =========================================================== -->
 <script src="js/00-namespace.js"></script>
+<script src="js/00-config.js"></script>
 <script src="js/00-tokenize.js"></script>
 <script src="data/passages.js"></script>
 <script src="js/01-catalog.js"></script>

@@ -33,24 +33,6 @@ const POPULAR_REFS = new Set([
 ]);
 function isPopularVerse(v){ return POPULAR_REFS.has(v.ref); }
 
-/* =========================================================
-   DIFFICULTY / RARITY — one shared 5-tier system
-   ========================================================= */
-const DIFFICULTIES = [
-  {label:"Easy", emoji:"☀️", stage:"Full Text"},
-  {label:"Medium", emoji:"⛅", stage:"Light Fade"},
-  {label:"Hard", emoji:"🌧️", stage:"Heavy Fade"},
-  {label:"Challenge", emoji:"⛈️", stage:"First Letters"},
-  {label:"Impossible", emoji:"🌪️", stage:"Blackout"}
-];
-const STAGES = DIFFICULTIES.map(d=>d.stage);
-const TIER_TRIMS = [
-  {trim:"#b0763b", glow:"rgba(176,118,59,.45)", metal:"Bronze"},
-  {trim:"#9fb2c1", glow:"rgba(159,178,193,.5)", metal:"Silver"},
-  {trim:"#a3b52f", glow:"rgba(163,181,47,.45)", metal:"Green Gold"},
-  {trim:"#f4b942", glow:"rgba(244,185,66,.55)", metal:"Gold"},
-  {trim:"#2fd4c0", glow:"rgba(47,212,192,.6)", metal:"Teal Gold"}
-];
 /* wordCount() used to be defined here as trim().split(/\s+/), which counted a
    free-standing em dash as a word and so disagreed with the study screen on 7
    passages. It is now the canonical one in js/00-tokenize.js. */
@@ -82,9 +64,6 @@ SQ.verseIdFor = verseIdFor;
 Object.defineProperty(SQ,"VERSES",{get:()=>VERSES,set:v=>{VERSES=v;},enumerable:true,configurable:true});
 SQ.POPULAR_REFS = POPULAR_REFS;
 SQ.isPopularVerse = isPopularVerse;
-SQ.DIFFICULTIES = DIFFICULTIES;
-SQ.STAGES = STAGES;
-SQ.TIER_TRIMS = TIER_TRIMS;
 SQ.difficultyIndexForText = difficultyIndexForText;
 SQ.difficultyForVerse = difficultyForVerse;
 SQ.difficultyLabelForVerse = difficultyLabelForVerse;
