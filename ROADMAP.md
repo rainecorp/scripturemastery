@@ -539,7 +539,11 @@ Source Seminary text from the 1920/1921 editions (§3.4). **Diff against the cur
 
 *Harness fix, found in flight:* T4a's live `Storage used: N KB` line made the Today fingerprint depend on whatever else was in `localStorage` at capture time — including the harness's own baseline blobs. Worse, it usually changed the hash *without* changing the length, which reads exactly like a real regression. `tests/fingerprint.js` now pins `storageUsedBytes()` for the duration of a capture, the same treatment `Math.random` already got, and restores it after. Verified by capturing twice over identical code: 84/84. Any future ticket that puts environment-dependent data on screen needs the same treatment.
 
-*Still open on T4:* text sourcing and the 1920↔2013 diff. Both need the §3.4 decision — 1920/1921 public-domain editions, or seeking permission for the current text. `data/text-sources.js` is empty and every passage says so on screen until that call is made.
+*Decision made 2026-08-11:* **current editions, confirmed usable by the owner.** That retires the 1920↔2013 diff — its only purpose was sizing the blast radius of shipping older text. It is replaced by something more useful: a diff of our own 100 passages against the current edition, which is a register of what is wrong *today*.
+
+*Shipped (T4c — the edition diff):* all 100 passages fetched from their own chapter pages on churchofjesuschrist.org (87 pages) and compared character by character. **82 matched exactly** and are recorded in [data/text-sources.js](scripture-tower/data/text-sources.js). **18 did not**, and are documented in [data/TEXT-REVIEW.md](scripture-tower/data/TEXT-REVIEW.md) in five classes: **E** — Joseph Smith—History 1:15–20 is missing 358 characters, two whole clauses; **A** — five passages carry modernized KJV wording (`anything`/`any thing`, `showing`/`shewing`, `male servant`/`manservant`, `fullness`/`fulness`, `offering`/`offerings`); **B** — nine passages flattened an em dash to a comma or a spaced dash, *the same defect T3's tokenizer work surfaced from the other end*; **C** — D&C 131:2 drops the edition's editorial brackets; **D** — two apostrophe-shape differences that cannot be adjudicated from a fetch. **Nothing was auto-applied.** The fetch is mediated by a summarizing model, so a mismatch is evidence rather than proof, and rewriting scripture from an automated diff is precisely the failure this system exists to prevent. Unresolved entries stay out of `text-sources.js`, so the app keeps saying on screen that their source is unverified. Tools checked in as [tools/text-fetch-plan.js](scripture-tower/tools/text-fetch-plan.js) and [tools/text-compare.js](scripture-tower/tools/text-compare.js).
+
+*Still open on T4:* adjudicating the 18. Classes A, B, C and E look like straightforward corrections; class D needs someone to look at the page. Fixing class B will change word counts, and therefore difficulty tiers and relic metals, on nine passages.
 
 ### Phase B — Honest mastery
 
@@ -660,7 +664,7 @@ Accounts; **three receipt sources resolving to one entitlement** — StoreKit, G
 | # | Question | Blocks | Status |
 |---|---|---|---|
 | 1 | Pricing ladder — confirm §5.4, especially the lifetime number | T20 | ⏳ Lifetime rule needs your call; rest is set |
-| 2 | Text sourcing — 1920/1921 editions, or seek permission for current text | T4 | ⏳ Recommend 1920/1921 + run the diff |
+| 2 | Text sourcing — 1920/1921 editions, or seek permission for current text | T4 | ✅ **Resolved 2026-08-11 — current editions, owner confirmed usable.** Diff run: 82/100 exact, 18 in data/TEXT-REVIEW.md |
 | 3 | COPPA / FERPA posture for under-13 accounts and class rosters | T17, T20 | ⏳ Needs a documented answer before any backend |
 | 4 | Legal review of the public-domain reasoning before a *paid* launch | Paid launch | ⏳ Not a blocker for building |
 | 5 | Custom tower art kit — one plain "pioneer tower," or several | T11 | ⏳ You said you'd design these |
