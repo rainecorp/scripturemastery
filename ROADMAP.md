@@ -557,6 +557,13 @@ Source Seminary text from the 1920/1921 editions (§3.4). **Diff against the cur
 
 **T5 · Recall engine (logic only)** — `js/recall.js`, §2.3 as pure functions over tokenizer output: session state, keystrokes, QWERTY adjacency, miss/reveal accounting, error budgets, grades. No rendering.
 **DoD** — tests: perfect → `easy` · one slip on 40 words → `good` · one slip on 6 words → `good` (budget floor) · 3 misses → auto-reveal + advance · reveal disqualifies `good` · adjacent-key slip records no miss with `strictMode` off and does with it on · backspace restores prior state · accuracy correct at every boundary.
+✅ DONE.
+
+*Shipped* as [js/00-recall.js](scripture-tower/js/00-recall.js) — tier 00 (its only functional dependency is the tokenizer, also tier 00; nothing here runs at load time, only when a session is created). `createRecallSession(text)` builds one slot per canonical word from `tokenWords`; `typeLetter`/`revealHint`/`backspace` mutate it and return an event descriptor; `scoreRecallSession`/`recallBudgets`/`gradeRecallSession` read it without mutating. `recallMeetsGate(grade, "first"|"reseal")` encodes the §2.3 evidence table (good+ to first-seal, hard+ to re-seal) since it's four lines of pure logic sitting right next to the grade table T6 will need it against.
+
+QWERTY adjacency is a computed physical key grid (three staggered rows, not a hand-typed table) rather than an asserted lookup — checkable geometry instead of a claim. Backspace resets the slot **completely** (fill, misses, and reveal all clear), not just its display, on the reading that "go back and try that one again" should mean a clean attempt.
+
+86 assertions in [tests/recall.test.js](scripture-tower/tests/recall.test.js), covering every DoD line plus the budget floor at several word counts, both auto-reveal and heart-reveal disqualifying `good`/`easy` (and two reveals separately dropping `hard`), safety on completed/empty sessions, and the gate table. Cross-checked against the real tokenizer on a genuine 19-word passage as an integration sanity check outside the fixture-based unit tests.
 
 **T6 · Gate sealing on the Recall Check ★★** *(the most important ticket here)*
 Build the Recall Check UI on T5: fixed-dimension slots in the passage's line shape, keyboard + on-screen pad, live percentage, per-position feedback. `"Recite & Seal ✦"` / `"Recite & Re-seal ✦"` open it; `sealVerse()` and `resealVerse()` are reachable **only** through a passing grade. Results panel shows percentage, grade, the exact words that wobbled, and *Try again* (free, unlimited) + *Study this one more*. `again` is never punitive. Self-report retained for accessibility at `hard` max, first-seal disallowed. Copy pass for "feedback, not failure."
