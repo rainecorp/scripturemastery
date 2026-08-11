@@ -422,40 +422,65 @@ One codebase, three surfaces:
   ```
 - Revisit ES modules when the app is served over HTTP (T15).
 
-### 7.2 Target layout
+### 7.2 Layout — as shipped in T2
+
+Filenames are **numbered, and the numbers are the load order.** They are not decoration: `03-state.js` runs its boot migrations the moment it loads, and `24-boot.js` calls `render()`. Reordering the tags breaks the app. The numbers also preserve the CSS cascade, which the original single `<style>` block gave us for free.
 
 ```
 scripture-tower/
-  index.html            ← shell + ordered <script> tags. Target < 200 lines.
-  css/     base · components · study · arena · towers
-  data/    passages.doctrinal-mastery · passages.retired · passages.articles-of-faith
-           passages.christian-foundations · campaigns
-  js/
-    config.js       DAY, REVIEW_LADDER, STAGES, TIER_TRIMS, RANKS, ARENA_*
-    tokenize.js     ★ the canonical tokenizer (new, T3)
-    text.js         escHTML, verse numbering, normalization
-    state.js        load, persist, schemaVersion, migration runner
-    catalog.js      allPassages(), campaigns, collections, selectors
-    review.js       isDue, grade→interval, sealCondition
-    learning.js     recordLearningAttempt, aggregates, trouble, strength
-    recall.js       first-letter engine, grading, forgiveness (new, T5)
-    entitlement.js  free/paid gating, receipt sources (T20)
-    fx.js  achievements.js  share.js  bridge.js
-    study.js  arena.js  towers.js  shelf.js  today.js  library.js
-    render.js  boot.js
-  tests/     tokenize · review · recall · state · rewards · smoke
-  fixtures/  clean-state.json · mid-progress.json · corrupt.json
+  index.html               67 lines — <link>s, the six root divs, ordered <script>s
+  css/   01-base 02-towers 03-ceremony 04-pages 05-arena
+         06-ui-v2 07-arena-v2 08-responsive
+  data/  passages.js                 the DATA literal (T9 splits it per track)
+  js/    00-namespace     SQ = the one global
+         01-catalog       VOLUME_ORDER, VERSES build, difficulty tiers
+         02-towers-data   TOWERS, RELICS
+         03-state         climber, STORE_KEY, load/persist/save, migrations, streak
+         04-review        seal/re-seal/eternal, REVIEW_LADDER, RANKS
+         05-relics        shard rendering, relic popup, chests
+         06-helpers       tower stats, recommended verse, toast, openStudy
+         07-sfx  08-fx    WebAudio synth · canvas confetti
+         09-checkin       daily check-in, journey milestones
+         10-achievements  definitions, sweep, overlay
+         11-share  12-ceremony  13-shelf
+         14-arena         engine: types, quests, hearts, question building
+         15-arena-views   trials, setup, session, results
+         16-shell         view state, render() dispatch
+         17-today  18-towers  19-library
+         20-text          tokenize, isWord, escHTML, verse numbers
+         21-highlight     Scripture Intelligence roles, lexicon, phrases
+         22-study         renderVerseHTML, blank picking, study screen
+         23-proveit  24-boot  25-bridge
+  tests/ fingerprint.js   deterministic DOM + computed-style snapshot
+         seed-fixture.js  the mid-progress save both runs share
+  tools/ split-from-baseline.py   how T2 was produced; --verify proves verbatim
 ```
+
+**Files T3+ will add:** `tokenize.js` (T3) · `recall.js` (T5) · `learning.js` (T13) · `entitlement.js` (T20) · per-track `data/passages.*` (T9–T12) · `fixtures/`.
+
+**Two deviations from the pre-split guess, both deliberate.** CSS is eight files, not five, because the boundaries had to fall on existing section banners to keep the cascade byte-identical — grouping by theme would have meant reordering rules. And `config.js` was not extracted, because the constants it would hold (`DAY`, `REVIEW_LADDER`, `RANKS`, `ARENA_*`, `TIER_TRIMS`) are scattered across five original sections; gathering them is a *move*, and T2 allows no moves. Do it in T3 as its own reviewable commit.
 
 ### 7.3 Procedure — follow exactly
 
 1. Commit untouched (T1).
-2. CSS out verbatim, five files, original order. Verify pixel-identical.
+2. CSS out verbatim, original order. Verify.
 3. `DATA` out verbatim. Verify.
-4. JS out **in the order it currently appears**, one section per file, adding only `SQ.` assignments. Verify after every file.
+4. JS out **in the order it currently appears**, one section per file, adding only `SQ.` assignments. Verify.
 5. Only then begin behavior changes.
 
 Do not reorder, rename, or "improve" anything during the split. A split commit that also changes behavior is unreviewable and becomes the source of every bug for a month.
+
+**The hazard that makes step 4 delicate.** Function declarations hoist across a whole `<script>`, but *not* across separate files. Any top-level code that runs at load and calls a function declared further down was fine in one blob and throws once split. There is exactly one such case in this codebase: `migrateV2()` (originally `:3133`) runs immediately and calls `todayStr()`, declared 72 lines later. The `03-state.js` boundary keeps them together. Check for new instances before moving any boundary.
+
+### 7.4 How T2 proved "zero behavior change"
+
+Three independent checks, because "it looked fine" is not evidence:
+
+1. **Verbatim** — every extracted body concatenates back to `git show SPLIT_BASE:index.html` byte for byte. All 34 files pass. This is what makes the diff reviewable: the only new lines in the entire commit are file headers, the `SQ` footers, and the shell.
+2. **Fingerprint** — `tests/fingerprint.js` hashes the rendered DOM of 76 states (every tab, all four towers, all ten Collection filters, four passages × five study stages, all eleven Arena question types, results, three overlays) plus 8 computed-style probes, plus `renderVerseHTML` / `chunkVerse` / `tokenize` / `classifyVerse` over all 100 passages. **82 of 84 identical.** The two that moved are `_meta.scripts` 1→27 and `_meta.sheets` 3→10 — the split itself. CSS rule count held at 812.
+3. **Runs from `file://`** — the non-negotiable one. Opened directly off disk: 27 scripts, 198 `SQ` bindings, 100 passages, fully styled. Plus zero console output and zero failed requests over HTTP, and a hand-played Arena round.
+
+Re-use that harness for T3 and T6. A refactor that can't produce this evidence isn't done.
 
 ---
 
@@ -463,12 +488,14 @@ Do not reorder, rename, or "improve" anything during the split. A split commit t
 
 ### Phase A — Foundations
 
-**T1 · Source control and safety net**
+**T1 · Source control and safety net** — ✅ **DONE**
 `git init`; `.gitignore` for `*.zip`, `.DS_Store`, `__MACOSX/`; baseline commit. Archive `scripture-tower 2/` → `_archive-scripture-tower-2/` with `DO-NOT-EDIT.txt`. Remove stale in-folder copies once captured in git.
 **DoD** — one baseline commit; exactly one `index.html` in the tree.
+*Shipped:* two commits — a baseline capturing the tree untouched, then the cleanup. Four copies of `index.html` existed; three were committed first (recoverable via `git show`) then removed. Six `.zip` snapshots moved to gitignored `_archive/zips/` rather than deleted — they'd bloat the repo permanently and can't be diffed. `scripture-tower 2/` was verified byte-identical (same md5 on `index.html`) before archiving, so nothing unique was frozen. The baseline is tagged **`SPLIT_BASE`**.
 
-**T2 · Mechanical code split** — §7, exactly. Classic scripts, `SQ` namespace, zero behavior change.
+**T2 · Mechanical code split** — ✅ **DONE**, §7. Classic scripts, `SQ` namespace, zero behavior change.
 **DoD** — `index.html` < 200 lines · double-click still works · every screen renders identically (Today, Towers, tower detail, Study, Prove It, Arena setup/session across all 11 types/results, Shelf, Collection, achievements, relic popup, share, ceremony) · zero console errors or 404s · before/after screenshot diff shows no change.
+*Shipped:* 6,984 lines → **67-line shell + 8 CSS + 26 JS**, all bodies verbatim, 198 bindings on `SQ` (`let`/`var` via live accessors so nothing goes stale). Evidence in §7.4: byte-identical reassembly, 82/84 fingerprints unchanged, runs from `file://`. Screenshot diff was **superseded by** the DOM+computed-style fingerprint, which is strictly stronger — it compares markup and resolved styles exactly rather than by eye, and covers 76 states instead of a handful.
 
 **T3 · The canonical tokenizer ★**
 The app has four incompatible notions of "word position": `tokenize()`+`isWord()` (`:6301`), `split(/\s+/)` (`:4342`, `:4357`, `:4373`, `:4380`), `clean.split(" ")` (`:6757`), `text.split(" ")` (`:3910`). **Verified: 7 of 100 passages already disagree** — JS—History 1:15–20 (503 vs 504), D&C 19:16–19 (89 vs 91), D&C 58:42–43, 64:9–11, 76:22–24, 121:34–36, 130:20–21. The divergence accumulates mid-passage, so it can't be corrected after the fact. Trouble maps, first-letter, phrase drills, and speech alignment all silently corrupt without this.

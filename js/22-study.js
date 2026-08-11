@@ -1,0 +1,226 @@
+/* 22-study.js
+   renderVerseHTML, blank picking, the study screen
+   Extracted verbatim from index.html lines 6530-6748 by T2. */
+function renderVerseHTML(text, stage, blanked, marks, smart){
+  const toks=tokenize(text);
+  let wIdx=0;
+  return toks.map(tok=>{
+    if(!isWord(tok)) return escHTML(tok);
+    const myIdx=wIdx++;
+    const safeTok=escHTML(tok);
+    const hideThis=blanked.has(myIdx);
+    const num=marks&&marks.has(myIdx)?`<sup class="vnum">${marks.get(myIdx)}</sup>`:"";
+    let hl="",style="",meta="";
+    const hit=smart?.selected?.get(myIdx);
+    if(hit){
+      const role=HL_ROLES[hit.role];
+      hl=" hlc";
+      const strength=hit.priority>=95?"0 0 0 1px rgba(30,41,59,.10) inset":"none";
+      style=` style="background:${role.color};box-shadow:${strength}"`;
+      meta=` data-role="${hit.role}" data-priority="${hit.priority}" title="${role.label}"`;
+    }
+    if(stage===0) return `${num}<span class="w${hl}" data-i="${myIdx}"${meta}${style}>${safeTok}</span>`;
+    if(stage===1||stage===2){
+      if(hideThis) return `${num}<span class="w blank" data-i="${myIdx}">${safeTok}</span>`;
+      return `${num}<span class="w${hl}" data-i="${myIdx}"${meta}${style}>${safeTok}</span>`;
+    }
+    if(stage===3){
+      const m=tok.match(/^(\w)(\w*)(.*)$/);
+      if(!m) return `${num}<span class="w">${safeTok}</span>`;
+      const stub=escHTML(m[1]+"…"+m[3]);
+      return `${num}<span class="w letter" data-i="${myIdx}" data-full="${safeTok}">${stub}</span>`;
+    }
+    if(stage===4) return `${num}<span class="w blank" data-i="${myIdx}">${safeTok}</span>`;
+    return `${num}<span class="w${hl}" data-i="${myIdx}"${meta}${style}>${safeTok}</span>`;
+  }).join("");
+}
+function pickBlankSet(text, fraction){
+  const toks = tokenize(text);
+  const wordIdxs = [];
+  let wIdx=0;
+  toks.forEach(t=>{ if(isWord(t)){ wordIdxs.push(wIdx); wIdx++; } });
+  const n = Math.round(wordIdxs.length * fraction);
+  const shuffled = wordIdxs.slice().sort(()=>Math.random()-0.5);
+  return new Set(shuffled.slice(0,n));
+}
+
+function renderStudy(){
+  const body = document.getElementById("body");
+  if(!view.verseId){ view.verseId = recommendedVerse().id; view.stage = state.progress[view.verseId].stage; }
+  const v = VERSES.find(x=>x.id===view.verseId);
+  const p = state.progress[v.id];
+  const stage = view.stage;
+  const diff = difficultyForVerse(v);
+  const r = relicFor(v);
+  const due = isDue(p);
+  const shards = shardsFor(p);
+
+  if(stage===1 && (view.blanked.size===0 || view.stageFor!==1)){ view.blanked = pickBlankSet(v.text, 0.3); view.stageFor=1; }
+  if(stage===2 && (view.blanked.size===0 || view.stageFor!==2)){ view.blanked = pickBlankSet(v.text, 0.65); view.stageFor=2; }
+  if(stage!==1 && stage!==2) view.stageFor=null;
+
+  const marks = verseNumberMap(v);
+  const smart = classifyVerse(v.text);
+  const verseHTML = renderVerseHTML(v.text, stage, view.blanked, marks, smart);
+
+  let primaryLabel;
+  if(!p.sealed) primaryLabel = stage<4 ? "I've got it, harder ▸" : "Recite &amp; Seal ✦";
+  else if(due) primaryLabel = "Recite &amp; Re-seal ✦";
+  else primaryLabel = "Polish the seal ✦";
+
+  body.innerHTML = `
+    <div class="study level-${diff.index}">
+      <div class="difficulty-badge" title="${p.sealed ? 'Sealed' : `${diff.label} · ${diff.words} words`}">${p.sealed ? '✨' : diff.emoji}</div>
+
+      <div class="study-relic">
+        ${relicHTML(v, 84)}
+        <div class="sr-info">
+          <div class="sr-name">${r.name}</div>
+          <div class="sr-tier" style="color:${diff.trim.trim}">${diff.trim.metal} relic · ${shards}/5 shards</div>
+          <div class="sr-cond">${p.sealed ? `${condBadgeHTML(p)} <span style="color:#9db4d6;font-size:11px;font-weight:800;margin-left:4px;">${nextReviewText(p)}</span>` : `<span style="color:#9db4d6;font-size:11px;font-weight:800;">Each stage you pass reveals a shard</span>`}</div>
+        </div>
+      </div>
+
+      ${due && view.reviewMode ? `<div class="review-banner">🕯️ <span>This seal is <strong>${sealCondition(p).label.toLowerCase()}</strong>. One honest recitation restores its shine and climbs the ladder toward an Eternal Seal.</span></div>` : ''}
+
+      <div class="study-head">
+        <div class="ref">${v.ref}</div>
+        ${popularPillHTML(v)}
+        <div class="theme">${v.theme} &nbsp;·&nbsp; ${v.volume}</div>
+      </div>
+      <div class="stage-label">${p.sealed ? '<span class="emoji">🏆</span><span>Sealed ✦</span>' : difficultyLabelForVerse(v)}</div>
+      <div class="difficulty-strip">
+        ${DIFFICULTIES.map((d,i)=>`<div class="difficulty-chip ${i<diff.index?'done':(i===diff.index?'current':'')}"><span>${d.emoji}</span><span class="label">${d.label}</span></div>`).join("")}
+      </div>
+      <div class="stage-label" style="margin-top:8px;color:var(--muted);letter-spacing:.12em;"><span>Memory stage: ${stageLabel(stage)}</span></div>
+      ${stage===0 ? `
+        <div class="hl-toolbar">
+          <button class="btn hl-toggle ${view.highlightMode?'active':''}" id="hlToggle">🖍️ Smart highlights ${view.highlightMode?'· on':'· off'}</button>
+        </div>
+        ${view.highlightMode ? `<div class="hl-hint">Colors reveal repeated anchor words, key phrases, doctrine, invitations, promises, and warnings.</div>
+        <div class="hl-legend">${["deity","anchor","foundation","faith","love","command","promise","warning","agency","identity"].map(k=>`<span class="hl-key"><i class="hl-swatch" style="background:${HL_ROLES[k].color}"></i>${HL_ROLES[k].label}</span>`).join("")}</div>` : ``}
+      ` : ``}
+      <div class="verse-text ${stage===0 && !view.highlightMode ? 'hl-off' : ''}" id="verseText">${verseHTML}</div>
+
+      <div class="stage-progress">
+        ${STAGES.map((s,i)=>`<div class="stage-dot ${i<stage?'done':(i===stage?'current':'')}"></div>`).join("")}
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="prevStage" ${stage===0?'disabled':''}>◂ Easier</button>
+        ${(stage===1||stage===2) ? `<button class="btn shuffle-btn" id="shuffleBtn">🔀 Shuffle words</button>` : ``}
+        <button class="btn" id="proveItBtn">🧩 Prove It</button>
+        <button class="btn primary" id="nextStage">${primaryLabel}</button>
+      </div>
+
+
+      <div class="nav-verse">
+        <span id="prevVerse">◂ Previous verse</span>
+        <span id="nextVerse">Next verse ▸</span>
+      </div>
+    </div>
+    <footer class="hint">Tap a blanked word to peek. Tapping costs nothing, but honest recitation is what seals it.</footer>
+  `;
+
+  body.querySelectorAll(".w.blank, .w.letter").forEach(el=>{
+    el.onclick = ()=>{
+      if(el.classList.contains("letter")) el.textContent = el.dataset.full;
+      else { el.classList.remove("blank"); el.classList.add("revealed"); }
+    };
+  });
+
+  const hlToggle = document.getElementById("hlToggle");
+  if(hlToggle) hlToggle.onclick = ()=>{ view.highlightMode = !view.highlightMode; renderStudy(); };
+
+  const shuffleBtn = document.getElementById("shuffleBtn");
+  if(shuffleBtn) shuffleBtn.onclick = ()=>{
+    view.blanked = pickBlankSet(v.text, stage===1 ? 0.3 : 0.65);
+    view.stageFor = stage;
+    renderStudy();
+    const vt = document.getElementById("verseText");
+    if(vt){ vt.classList.remove("reshuffled"); void vt.offsetWidth; vt.classList.add("reshuffled"); }
+  };
+
+  document.getElementById("prevStage").onclick = ()=>{
+    view.stage = Math.max(0, view.stage-1);
+    view.blanked = new Set(); view.stageFor=null;
+    renderStudy();
+  };
+
+  document.getElementById("nextStage").onclick = ()=>{
+    if(!p.sealed && stage<4){
+      view.stage = stage+1;
+      view.blanked = new Set(); view.stageFor=null;
+      const prevShards = shardsFor(p);
+      p.stage = Math.max(p.stage, view.stage);
+      state.xp += 10;
+      const heartGain = refillArenaHearts(1);
+      touchStreak();
+      saveState();
+      renderStudy();
+      if(shardsFor(p) > prevShards){
+        SFX.correct(2);
+        const sr = body.querySelector(".study-relic .relic");
+        if(sr) FX.burstAt(sr, {count:22});
+        showToast(`✦ A shard breaks away! <strong>${r.name}</strong> · ${shardsFor(p)}/5 revealed${heartGain ? ` · 💛 +${heartGain}` : ""}`);
+      } else {
+        SFX.tap();
+      }
+    } else if(!p.sealed){
+      sealVerse(p);
+      const floorN = recordClimb(v);
+      emitBridge("seal", v, 25);
+      state.xp += 50;
+      const heartGain = refillArenaHearts(1);
+      touchStreak();
+      saveState();
+      if(heartGain) setTimeout(()=> showToast(`💛 Arena heart restored by sealing ${v.ref}.`, true), 2600);
+      playSealCeremony(v, floorN);
+    } else if(due){
+      const res = resealVerse(p);
+      emitBridge(res.eternal ? "eternal" : "reseal", v, res.eternal ? 40 : 10);
+      state.xp += res.xp;
+      const heartGain = refillArenaHearts(1);
+      touchStreak();
+      saveState();
+      view.reviewMode = false;
+      render();
+      if(res.eternal){
+        SFX.fanfare(); FX.rain({count:120});
+        showToast(`♾️ <strong>ETERNAL SEAL</strong> · ${v.ref}<br><span style="color:#9db4d6;font-size:11.5px;">${r.name} will never fade again. +${res.xp} XP${heartGain ? " · 💛 +1" : ""}</span>`, true);
+      } else {
+        SFX.seal(); FX.rain({count:50});
+        showToast(`✦ Re-sealed! Ladder rung ${res.lvl}/${REVIEW_LADDER.length}. +${res.xp} XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}`);
+      }
+    } else {
+      state.xp += 5;
+      const heartGain = refillArenaHearts(1);
+      touchStreak();
+      saveState();
+      renderStudy();
+      SFX.tap();
+      showToast(`✦ Seal polished. +5 XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}`);
+    }
+  };
+
+  const proveItBtn = document.getElementById("proveItBtn");
+  if(proveItBtn) proveItBtn.onclick = ()=> openProveIt(v);
+
+  document.getElementById("prevVerse").onclick = ()=> jumpVerse(-1);
+  document.getElementById("nextVerse").onclick = ()=> jumpVerse(1);
+  function jumpVerse(dir){
+    const idx = VERSES.findIndex(x=>x.id===view.verseId);
+    const next = (idx+dir+VERSES.length)%VERSES.length;
+    view.verseId = VERSES[next].id;
+    view.stage = state.progress[view.verseId].stage;
+    view.blanked = new Set(); view.stageFor=null;
+    view.editing = false;
+    view.reviewMode = isDue(state.progress[view.verseId]);
+    render();
+  }
+}
+
+/* ---- SQ registry (generated by T2 split; see ROADMAP.md §7) ---- */
+SQ.renderVerseHTML = renderVerseHTML;
+SQ.pickBlankSet = pickBlankSet;
+SQ.renderStudy = renderStudy;

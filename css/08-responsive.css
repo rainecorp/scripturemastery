@@ -1,0 +1,38 @@
+/* 08-responsive.css — fx canvas, reduced motion, responsive polish
+   Verbatim from index.html lines 2357-2392 (T2). Order is load-bearing: the
+   cascade depends on these files staying in numeric order. */
+  /* =========================================================
+     FX CANVAS + REDUCED MOTION
+     ========================================================= */
+  #fxCanvas{position:fixed; inset:0; z-index:220; pointer-events:none;}
+  @media (prefers-reduced-motion:reduce){
+    .ci-gift:not(.claimed) .chest-img, .stat-streak .flame, .ci-flame, .blitz-secs.low{animation:none !important;}
+  }
+
+  /* =========================================================
+     RESPONSIVE POLISH — landscape phones + small screens
+     ========================================================= */
+  @media (max-width:400px){
+    .ci-top{flex-wrap:wrap;}
+    .ci-gift{width:74px; margin-left:auto;}
+    .ci-flame-wrap{width:54px;}
+    .ci-flame{font-size:28px;}
+    .mode-grid{grid-template-columns:1fr;}
+    .pm-grid{grid-template-columns:1fr;}
+    .hdr-round{padding:5px 8px; font-size:13px;}
+  }
+  @media (max-width:640px){
+    .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:70;}
+  }
+  @media (orientation:landscape) and (max-height:520px){
+    header.top{padding:12px 14px 12px;}
+    header.top h1{font-size:24px;}
+    header.top h1::after{display:none;}
+    .hero-start{padding:16px 14px;}
+    .cer-stage, .prove-stage{max-height:94vh; overflow-y:auto;}
+    .relic-pop-card{max-height:94vh;}
+    .rp-relic .relic{--rsz:clamp(110px, 24vh, 200px) !important;}
+    nav.tabs{position:static; margin:10px 0 12px; box-shadow:var(--shadow-sm);}
+    nav.tabs button{flex-direction:row; min-height:36px; font-size:11px; gap:5px;}
+    nav.tabs button .tab-ico{font-size:14px;}
+  }

@@ -1,0 +1,230 @@
+/* 03-ceremony.css — seal ceremony, relic popup, Prove It stage
+   Verbatim from index.html lines 1395-1621 (T2). Order is load-bearing: the
+   cascade depends on these files staying in numeric order. */
+  /* =========================================================
+     SEAL CEREMONY — chest opens, relic rises
+     ========================================================= */
+  .cer{position:fixed; inset:0; z-index:80; display:none;}
+  .cer.show{display:block;}
+  .cer-backdrop{
+    position:absolute; inset:0;
+    background:radial-gradient(circle at 50% 40%, rgba(30,52,92,.6), rgba(2,6,18,.97) 72%);
+    backdrop-filter:blur(6px);
+  }
+  .cer-stage{
+    position:relative; height:100%; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px; padding:24px; text-align:center;
+  }
+  .cer-rays{
+    position:absolute; left:50%; top:36%; width:560px; height:560px;
+    transform:translate(-50%,-50%); opacity:0; pointer-events:none;
+    background:repeating-conic-gradient(rgba(255,214,110,.16) 0deg 12deg, transparent 12deg 28deg);
+    border-radius:50%;
+    -webkit-mask:radial-gradient(circle, #000 0%, transparent 66%);
+    mask:radial-gradient(circle, #000 0%, transparent 66%);
+    animation:cerSpin 30s linear infinite;
+    transition:opacity .9s ease;
+  }
+  @keyframes cerSpin{to{transform:translate(-50%,-50%) rotate(360deg);}}
+  .cer.phase-open .cer-rays{opacity:1;}
+  .cer-scene{position:relative; width:240px; height:258px; flex-shrink:0;}
+  .cer-chest{position:absolute; left:50%; bottom:0; transform:translateX(-50%); transition:filter .45s ease;}
+  .cer-chest .chest-img{filter:drop-shadow(0 10px 22px rgba(0,0,0,.55));}
+  .cer.phase-shake .cer-chest{animation:cerShake .5s ease-in-out 2;}
+  @keyframes cerShake{
+    0%,100%{transform:translateX(-50%) rotate(0);}
+    25%{transform:translateX(-53%) rotate(-3.5deg);}
+    75%{transform:translateX(-47%) rotate(3.5deg);}
+  }
+  .cer.phase-open .cer-chest{filter:brightness(1.18) drop-shadow(0 0 28px rgba(255,205,100,.85));}
+  .cer-burst{
+    position:absolute; left:50%; bottom:104px; width:12px; height:12px;
+    border-radius:50%; transform:translate(-50%,0); opacity:0; pointer-events:none;
+    background:radial-gradient(circle, #fff7d6, rgba(255,196,60,.9) 40%, transparent 70%);
+  }
+  .cer.phase-open .cer-burst{animation:cerBurst .85s ease-out;}
+  @keyframes cerBurst{
+    0%{opacity:1; transform:translate(-50%,0) scale(1);}
+    100%{opacity:0; transform:translate(-50%,0) scale(34);}
+  }
+  .cer-relic-wrap{
+    position:absolute; left:50%; bottom:64px; z-index:2;
+    transform:translate(-50%,26px) scale(.25); opacity:0;
+    transition:transform 1s cubic-bezier(.2,.9,.3,1.15), opacity .5s ease;
+  }
+  .cer.phase-open .cer-relic-wrap{opacity:1; transform:translate(-50%,-52px) scale(1);}
+  .cer-relic-img{
+    width:150px; height:150px; object-fit:contain; display:block;
+    filter:drop-shadow(0 8px 22px rgba(0,0,0,.5)) drop-shadow(0 0 32px rgba(255,210,110,.6));
+    animation:cerFloat 3.6s ease-in-out 1.1s infinite;
+  }
+  .cer-relic-emoji{
+    font-size:100px; line-height:1;
+    filter:drop-shadow(0 0 28px rgba(255,210,110,.65));
+    animation:cerFloat 3.6s ease-in-out 1.1s infinite;
+  }
+  @keyframes cerFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  .cer-text{opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease; color:#fff;}
+  .cer.phase-text .cer-text{opacity:1; transform:none;}
+  .cer-kicker{font-size:11px; font-weight:950; letter-spacing:.18em; text-transform:uppercase; color:#fbbf24;}
+  .cer-name{font-family:"Cinzel",Georgia,serif; font-size:clamp(22px,6vw,30px); font-weight:800; margin-top:6px;}
+  .cer-motto{margin-top:4px; color:#cfdcf3; font-size:14.5px; font-weight:700; font-style:italic;}
+  .cer-ref{margin-top:8px; color:#9db4d6; font-size:12px; font-weight:800;}
+  .cer-btn{opacity:0; transform:translateY(10px); transition:opacity .5s ease .15s, transform .5s ease .15s; width:100%; max-width:280px;}
+  .cer.phase-text .cer-btn, .cer-btn.show{opacity:1; transform:none;}
+  .cer-skip{opacity:0; transition:opacity .5s ease .35s; color:#9db4d6; font-size:12px; font-weight:800; cursor:pointer;}
+  .cer.phase-text .cer-skip, .cer-skip.show{opacity:1;}
+  .cer-skip:hover{color:#cfdcf3;}
+
+  /* =========================================================
+     RELIC POPUP — tap a relic to see its verse
+     ========================================================= */
+  .relic-pop-stage{
+    position:relative; height:100%; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .relic-pop-card{
+    position:relative;
+    width:100%; max-width:460px; max-height:88vh; overflow-y:auto;
+    background:linear-gradient(160deg, rgba(24,16,48,.98), rgba(8,6,22,.99));
+    border:1px solid rgba(167,139,250,.4); border-radius:22px;
+    padding:26px 22px 22px; text-align:center; color:#fff;
+    box-shadow:0 14px 34px rgba(0,5,20,.5);
+    opacity:0; transform:translateY(14px) scale(.97);
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .relic-pop.show .relic-pop-card{opacity:1; transform:none;}
+  .rp-close{
+    position:absolute; top:10px; right:10px; width:32px; height:32px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:50%;
+    color:#fff; font-size:16px; font-weight:900; cursor:pointer; line-height:1; padding:0;
+  }
+  .rp-close:hover{background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.4);}
+  .rp-relic{margin:4px auto 12px;}
+  .rp-relic .relic{--rsz:clamp(170px, 62vw, 300px) !important;}
+  .rp-ref{font-family:"Cinzel",Georgia,serif; font-size:22px; font-weight:800;}
+  .rp-theme{margin-top:3px; color:#cabffa; font-size:12.5px; font-weight:800;}
+  .rp-status{margin:10px 0; display:flex; justify-content:center; flex-wrap:wrap; gap:6px;}
+  .rp-text{
+    margin:14px 0; padding:14px; border-radius:14px; text-align:left;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    font-family:Georgia,"Times New Roman",serif; font-size:14.5px; line-height:1.6; color:#f2eefc;
+  }
+  .rp-text sup.vnum{font-size:.6em; font-weight:900; color:#fde68a; margin-right:1px; opacity:.85;}
+  .rp-btns{display:flex; flex-direction:column; gap:9px; margin-top:14px;}
+  .rp-btns .btn{width:100%;}
+  .rp-link{color:#a78bfa; font-size:12.5px; font-weight:800; text-decoration:none;}
+  .rp-link:hover{text-decoration:underline;}
+
+  /* =========================================================
+     PROVE IT V2 — focused, no-page-scroll scripture builder
+     ========================================================= */
+  .prove-stage{
+    position:relative;
+    width:min(760px,calc(100vw - 24px));
+    height:min(760px,calc(100dvh - 24px));
+    max-height:none;
+    overflow:hidden;
+    margin:0 auto;
+    padding:0;
+    display:grid;
+    grid-template-rows:auto auto minmax(0,1fr) auto;
+    color:#fff;
+    background:
+      radial-gradient(circle at 50% -20%,rgba(34,211,238,.18),transparent 45%),
+      linear-gradient(160deg,rgba(24,16,48,.99),rgba(8,6,22,.995));
+    border:1px solid rgba(167,139,250,.48);
+    border-radius:24px;
+    box-shadow:0 22px 58px rgba(0,5,20,.62),0 0 0 1px rgba(255,255,255,.04) inset;
+  }
+  .prove-head{
+    position:relative;
+    padding:20px 58px 13px 20px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.035);
+  }
+  .prove-head .cer-kicker{margin:0;color:#fde68a;}
+  .prove-title-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:5px;}
+  .prove-ref{font-family:"Cinzel",Georgia,serif;font-size:clamp(20px,5vw,28px);font-weight:800;line-height:1.1;}
+  .prove-step{flex-shrink:0;color:#cabffa;font-size:11px;font-weight:950;letter-spacing:.06em;text-transform:uppercase;}
+  .prove-progress{height:7px;margin:12px 0 0;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.08);}
+  .prove-progress i{display:block;height:100%;width:var(--pct,0%);border-radius:inherit;background:linear-gradient(90deg,#22d3ee,#a78bfa 58%,#fbbf24);box-shadow:0 0 12px rgba(34,211,238,.5);transition:width .35s ease;}
+  .prove-instruction{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    min-height:42px;padding:8px 18px;text-align:center;
+    color:#c7d2e6;background:rgba(7,13,31,.45);
+    border-bottom:1px solid rgba(255,255,255,.08);
+    font-size:12px;font-weight:850;line-height:1.35;
+  }
+  .prove-reader-wrap{min-height:0;padding:14px 16px 10px;display:flex;}
+  .prove-reader{
+    position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    padding:clamp(18px,4vw,28px);
+    border-radius:18px;
+    color:#f8f5ff;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:clamp(18px,3.8vw,25px);line-height:1.72;text-align:left;
+    scrollbar-width:thin;scrollbar-color:rgba(167,139,250,.6) transparent;
+  }
+  .prove-reader::-webkit-scrollbar{width:7px}.prove-reader::-webkit-scrollbar-thumb{background:rgba(167,139,250,.55);border-radius:999px;}
+  .prove-complete{color:#fff;}
+  .prove-current{
+    display:inline;border-radius:6px;padding:.06em .13em;
+    background:rgba(244,185,66,.19);box-shadow:0 0 0 1px rgba(244,185,66,.34);
+    box-decoration-break:clone;-webkit-box-decoration-break:clone;
+  }
+  .prove-cursor{
+    display:inline-block;width:.68em;height:1.15em;margin:0 .15em -.18em;
+    border-radius:4px;background:linear-gradient(180deg,#fde68a,#f59e0b);
+    box-shadow:0 0 12px rgba(251,191,36,.75);
+    animation:proveCursor 1.1s ease-in-out infinite;
+  }
+  @keyframes proveCursor{0%,100%{opacity:.45;transform:scaleY(.82)}50%{opacity:1;transform:scaleY(1)}}
+  .prove-upcoming{color:rgba(199,210,230,.20);filter:blur(3.5px);user-select:none;}
+  .prove-empty{color:#9c93c9;font-style:italic;}
+  .prove-action{
+    padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));
+    border-top:1px solid rgba(255,255,255,.1);
+    background:linear-gradient(180deg,rgba(12,9,29,.94),rgba(8,6,22,.99));
+    box-shadow:0 -12px 30px rgba(0,0,0,.18);
+  }
+  .prove-prompt{margin:0 0 9px;text-align:center;color:#fde68a;font-size:11px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;}
+  .prove-options{display:grid;grid-template-columns:1fr;gap:8px;width:100%;max-width:680px;margin:0 auto;}
+  .prove-opt{
+    position:relative;width:100%;min-height:48px;padding:11px 13px 11px 48px!important;
+    white-space:normal;text-align:left;line-height:1.34!important;
+    color:#f7f4ff!important;background:rgba(255,255,255,.075)!important;
+    border:1.5px solid rgba(167,139,250,.28)!important;box-shadow:none!important;
+    font-family:Georgia,"Times New Roman",serif!important;font-size:clamp(14px,2.8vw,17px)!important;font-weight:700!important;
+  }
+  .prove-opt::before{
+    content:attr(data-key);position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    width:25px;height:25px;display:grid;place-items:center;border-radius:8px;
+    color:#d8d1ff;background:rgba(167,139,250,.16);border:1px solid rgba(167,139,250,.34);
+    font-family:var(--font);font-size:11px;font-weight:950;
+  }
+  .prove-opt:hover{transform:translateY(-1px);border-color:rgba(34,211,238,.72)!important;background:rgba(34,211,238,.11)!important;}
+  .prove-opt.correct{border-color:#34d399!important;background:rgba(52,211,153,.16)!important;}
+  .prove-opt.wrong{animation:cerShake .35s ease-in-out;border-color:#f87171!important;background:rgba(248,113,113,.14)!important;}
+  .prove-options.resolving{pointer-events:none; opacity:.52; transform:translateY(2px); transition:opacity .1s ease, transform .1s ease;}
+  .prove-options.resolving .prove-opt:not(.correct){opacity:.42;}
+  .prove-tools{display:flex;justify-content:center;gap:12px;margin-top:9px;}
+  .prove-tool{appearance:none;border:0;background:transparent;color:#9c93c9;font:850 11px var(--font);cursor:pointer;padding:5px 7px;}
+  .prove-tool:hover{color:#fff}.prove-tool:disabled{opacity:.3;cursor:default;}
+  .prove-feedback{min-height:18px;margin-top:5px;text-align:center;color:#fca5a5;font-size:11px;font-weight:850;}
+  .prove-finish{display:grid;place-items:center;text-align:center;min-height:0;padding:22px;overflow-y:auto;}
+  .prove-finish-glyph{font-size:56px;filter:drop-shadow(0 0 18px rgba(251,191,36,.5));animation:glyphFloat 2.5s ease-in-out infinite;}
+  .prove-finish .cer-name{margin-top:6px;}
+  .prove-finish-text{max-width:540px;margin:12px auto 18px;padding:16px;border-radius:16px;text-align:left;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.58;color:#f2eefc;}
+  @media (min-width:680px){.prove-options{grid-template-columns:repeat(3,1fr)}.prove-opt{padding:13px 12px 13px 42px!important;}}
+  @media (max-width:520px){
+    .relic-pop-stage{padding:6px;}
+    .prove-stage{width:calc(100vw - 12px);height:calc(100dvh - 12px);border-radius:20px;}
+    .prove-head{padding:15px 50px 10px 14px;}
+    .prove-reader-wrap{padding:9px 9px 7px;}
+    .prove-reader{padding:16px;font-size:18px;line-height:1.62;}
+    .prove-action{padding:9px 9px calc(10px + env(safe-area-inset-bottom,0px));}
+    .prove-opt{min-height:44px;padding-top:9px!important;padding-bottom:9px!important;}
+  }

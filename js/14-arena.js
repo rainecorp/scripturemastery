@@ -1,0 +1,545 @@
+/* 14-arena.js
+   arena engine: types, quests, hearts, question building, scoring
+   Extracted verbatim from index.html lines 4105-4603 by T2. */
+/* =========================================================
+   ARENA — configurable knowledge trials: pick your filters,
+   your challenge format, and your difficulty. Correct answers
+   earn score + streak bonuses; due verses answered correctly
+   are re-sealed; milestones unlock achievements.
+   ========================================================= */
+function shuffleArr(a){
+  const x = a.slice();
+  for(let i=x.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [x[i], x[j]] = [x[j], x[i]];
+  }
+  return x;
+}
+function trialPool(){
+  return VERSES.filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
+}
+function trialSnippet(text, words){
+  const w = (text||"").trim().split(/\s+/);
+  const n = words || 14;
+  return w.slice(0, n).join(" ") + (w.length > n ? " …" : "");
+}
+
+const ARENA_DIFF = {
+  easy:   {key:"easy",   label:"Easy",   emoji:"😌", options:3, timer:40, hintFree:true},
+  normal: {key:"normal", label:"Normal", emoji:"🙂", options:3, timer:25, hintFree:false},
+  hard:   {key:"hard",   label:"Hard",   emoji:"🥵", options:4, timer:15, hintFree:false}
+};
+const ARENA_TYPES = ["text2ref","ref2text","theme2ref","finishVerse","buildVerse","fillBlank","findError","fullRecitation","timedRecall","wordScramble","pairMatch"];
+const ARENA_TYPE_LABEL = {
+  text2ref:"Reference Match", ref2text:"First Words", theme2ref:"Keyword Match",
+  finishVerse:"Finish the Verse", buildVerse:"Build the Verse", fillBlank:"Fill in the Blank",
+  findError:"Find the Error", fullRecitation:"Full Recitation", timedRecall:"Timed Recall",
+  wordScramble:"Untangle the Verse", pairMatch:"Match the Pairs"
+};
+const ARENA_ACHIEVEMENTS = [
+  {id:"first_session",  emoji:"🌱", name:"Scripture Seeker",   desc:"Complete your first Arena session"},
+  {id:"streak10",       emoji:"🔥", name:"Verse Builder",      desc:"Ten correct answers in a row"},
+  {id:"perfect",        emoji:"✨", name:"Iron Rod Disciple",  desc:"A perfect Arena session"},
+  {id:"all_books",      emoji:"🛡️", name:"Scripture Defender", desc:"Practiced scriptures from every book"},
+  {id:"recite_no_hints",emoji:"🎤", name:"Master Reciter",     desc:"Recited a memorized scripture without hints"},
+  {id:"book_area",      emoji:"📖", name:"Keeper of the Word", desc:"Completed one Book Mastery area"},
+  {id:"book_mastery",   emoji:"🏆", name:"Arena Champion",     desc:"Completed an entire Book Mastery Challenge"},
+  {id:"grand_mastery",  emoji:"👑", name:"Scripture Master",   desc:"Completed the Grand Scripture Challenge"},
+  {id:"mastered25",     emoji:"🥉", name:"25 Mastered",        desc:"Mastered 25 scriptures"},
+  {id:"mastered50",     emoji:"🥈", name:"50 Mastered",        desc:"Mastered 50 scriptures"},
+  {id:"mastered100",    emoji:"🥇", name:"100 Mastered",       desc:"Mastered 100 scriptures"},
+  {id:"blitz_ace",      emoji:"⚡", name:"Lightning Ace",      desc:"15 correct in one Lightning Round"}
+];
+const ARENA_TITLES = [
+  [0,"Scripture Seeker"],[2,"Verse Builder"],[4,"Iron Rod Disciple"],[6,"Scripture Defender"],
+  [8,"Master Reciter"],[9,"Keeper of the Word"],[10,"Arena Champion"],[11,"Scripture Master"]
+];
+const ARENA_HEART_MAX = 3;
+function arenaTitleFor(count){
+  let t = ARENA_TITLES[0][1];
+  ARENA_TITLES.forEach(([n,name])=>{ if(count>=n) t=name; });
+  return t;
+}
+
+/* ---- Arena Quests: three rotating daily challenges, rewarded with a
+   chest-badge on the Quest Shelf. Progress is tracked live as the
+   player answers questions and finishes sessions. ---- */
+const ARENA_QUEST_POOL = [
+  {id:"ref_hunter",   name:"Reference Ranger", desc:"Answer 5 Reference Match questions correctly", track:"type", type:"text2ref",     goal:5, emoji:"🧭", chest:4},
+  {id:"first_words",  name:"Quick Starter",    desc:"Answer 5 First Words questions correctly",      track:"type", type:"ref2text",     goal:5, emoji:"🏁", chest:4},
+  {id:"keyword",      name:"Keyword Hunter",   desc:"Answer 5 Keyword Match questions correctly",     track:"type", type:"theme2ref",    goal:5, emoji:"🔑", chest:4},
+  {id:"finisher",     name:"Verse Finisher",   desc:"Finish the Verse correctly 5 times",             track:"type", type:"finishVerse",  goal:5, emoji:"🏹", chest:4},
+  {id:"builder",      name:"Verse Builder",    desc:"Correctly place 8 sections in Build the Verse",  track:"buildStep", type:"buildVerse", goal:8, emoji:"🧩", chest:9},
+  {id:"blanker",      name:"Blank Filler",     desc:"Fill in the Blank correctly 5 times",            track:"type", type:"fillBlank",    goal:5, emoji:"✏️", chest:4},
+  {id:"detective",    name:"Error Spotter",    desc:"Find the Error correctly 5 times",               track:"type", type:"findError",    goal:5, emoji:"🕵️", chest:9},
+  {id:"reciter",      name:"Bold Reciter",     desc:"Complete a Full Recitation successfully",        track:"type", type:"fullRecitation",goal:1, emoji:"🎤", chest:14},
+  {id:"clockbeater",  name:"Clock Beater",     desc:"Beat 3 Timed Recall questions",                  track:"type", type:"timedRecall",   goal:3, emoji:"⏱️", chest:9},
+  {id:"regular",      name:"Arena Regular",    desc:"Complete 3 Arena sessions today",                track:"session", goal:3, emoji:"⚔️", chest:9},
+  {id:"flawless",     name:"Flawless Victory", desc:"Finish a session with 100% accuracy",            track:"perfect", goal:1, emoji:"✨", chest:19},
+  {id:"onfire",       name:"On Fire",          desc:"Reach a combo streak of 8 in one session",       track:"streak", goal:8, emoji:"🔥", chest:14},
+  {id:"untangler",    name:"Thread Weaver",    desc:"Untangle 3 scrambled verses",                    track:"type", type:"wordScramble", goal:3, emoji:"🧵", chest:9},
+  {id:"matchmaker",   name:"Pair Matcher",     desc:"Win 3 Match the Pairs rounds",                   track:"type", type:"pairMatch",    goal:3, emoji:"🎴", chest:9},
+  {id:"lightning",    name:"Lightning Legend", desc:"Get 10 correct in one Lightning Round",          track:"blitz", goal:10, emoji:"⚡", chest:19}
+];
+function ensureArenaQuests(a){
+  const today = todayStr();
+  if(!a.quests || a.quests.date !== today){
+    const picks = shuffleArr(ARENA_QUEST_POOL).slice(0,3);
+    a.quests = {
+      date: today,
+      list: picks.map(t=>({id:t.id, progress:0, goal:t.goal, done:false}))
+    };
+  }
+  a.questBadges = a.questBadges || [];
+  return a.quests;
+}
+function questDef(id){ return ARENA_QUEST_POOL.find(t=>t.id===id); }
+function bumpArenaQuests(a, matchFn, amount){
+  const q = ensureArenaQuests(a);
+  let anyDone = [];
+  q.list.forEach(inst=>{
+    if(inst.done) return;
+    const def = questDef(inst.id);
+    if(!def || !matchFn(def)) return;
+    inst.progress = Math.min(inst.goal, inst.progress + amount);
+    if(inst.progress >= inst.goal){
+      inst.done = true;
+      a.questBadges.push({id:def.id, name:def.name, emoji:def.emoji, chest:def.chest, earnedAt:Date.now()});
+      anyDone.push(def);
+    }
+  });
+  return anyDone;
+}
+function setArenaQuestProgress(a, matchFn, value){
+  const q = ensureArenaQuests(a);
+  let anyDone = [];
+  q.list.forEach(inst=>{
+    if(inst.done) return;
+    const def = questDef(inst.id);
+    if(!def || !matchFn(def)) return;
+    inst.progress = Math.min(inst.goal, Math.max(inst.progress, value));
+    if(inst.progress >= inst.goal){
+      inst.done = true;
+      a.questBadges.push({id:def.id, name:def.name, emoji:def.emoji, chest:def.chest, earnedAt:Date.now()});
+      anyDone.push(def);
+    }
+  });
+  return anyDone;
+}
+function ensureArena(){
+  if(!state.arena) state.arena = {};
+  const a = state.arena;
+  a.filters = a.filters || {status:"all", books: VOLUME_ORDER.slice()};
+  if(!a.filters.books || !a.filters.books.length) a.filters.books = VOLUME_ORDER.slice();
+  a.difficulty = a.difficulty || "normal";
+  a.score = a.score || {total:0, best:0};
+  a.streakBest = a.streakBest || 0;
+  a.achievements = a.achievements || [];
+  a.booksPracticed = a.booksPracticed || [];
+  a.stats = a.stats || {sessions:0, totalAnswered:0, totalCorrect:0, hintsUsed:0, resealedCount:0, byType:{}};
+  ARENA_TYPES.forEach(t=>{ if(!a.stats.byType[t]) a.stats.byType[t] = {played:0, correct:0}; });
+  ensureArenaQuests(a);
+  a.bookMastery = a.bookMastery || {};
+  VOLUME_ORDER.forEach(vol=>{
+    if(!a.bookMastery[vol] || !a.bookMastery[vol].areas) a.bookMastery[vol] = {areas:[false,false,false,false,false]};
+  });
+  a.grand = a.grand || {};
+  if(!a.grand.areas || a.grand.areas.length!==10) a.grand.areas = new Array(10).fill(false);
+  a.blitz = a.blitz || {played:0, best:0};
+  a.hearts = Math.max(0, Math.min(ARENA_HEART_MAX, a.hearts == null ? ARENA_HEART_MAX : a.hearts));
+  return a;
+}
+function arenaHeartCount(){ return ensureArena().hearts; }
+function refillArenaHearts(amount, label){
+  const a = ensureArena();
+  const before = a.hearts;
+  a.hearts = Math.min(ARENA_HEART_MAX, a.hearts + (amount || ARENA_HEART_MAX));
+  const gained = a.hearts - before;
+  if(gained > 0 && label){
+    setTimeout(()=> showToast(`💛 <strong>${label}</strong><br><span style="font-size:11.5px;color:#9db4d6;">Arena hearts refilled: ${a.hearts}/${ARENA_HEART_MAX}</span>`, true), 250);
+  }
+  saveState();
+  return gained;
+}
+function arenaHeartsHTML(extra){
+  const n = arenaHeartCount();
+  return `<div class="arena-heart-bank" title="Arena heart hints">
+    ${Array.from({length:ARENA_HEART_MAX},(_,i)=>`<span class="heart ${i<n?'':'empty'}">${i<n?'💛':'♡'}</span>`).join("")}
+    <span class="heart-label">${n}/${ARENA_HEART_MAX} hints</span>${extra||""}
+  </div>`;
+}
+function refreshArenaHeartBanks(){
+  try{
+    document.querySelectorAll(".arena-heart-bank").forEach(el=>{ el.outerHTML = arenaHeartsHTML(); });
+  }catch(e){}
+}
+function spendArenaHeart(T, q, label){
+  const a = ensureArena();
+  if(a.hearts <= 0){
+    showToast(`♡ <strong>No Arena hearts left.</strong><br><span style="font-size:11.5px;color:#9db4d6;">Refill them by opening the daily blessing, sealing a verse, or polishing a seal.</span>`, true);
+    SFX.wrong();
+    return false;
+  }
+  a.hearts -= 1;
+  if(T) T.hintsUsed += 1;
+  if(q) q.hinted = true;
+  saveState();
+  refreshArenaHeartBanks();
+  showToast(`💛 ${label || "Heart hint used"} · ${a.hearts}/${ARENA_HEART_MAX} left`);
+  return true;
+}
+function bookAreas(vol){
+  const vs = versesInVolume(vol);
+  const areas = [];
+  for(let i=0;i<5;i++) areas.push(vs.slice(i*5, i*5+5));
+  return areas;
+}
+function grandAreas(){
+  const sorted = shuffleArr(VERSES).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
+  const areas = [];
+  for(let i=0;i<10;i++) areas.push(sorted.slice(i*10, i*10+10));
+  return areas;
+}
+function arenaFilteredPool(){
+  const a = ensureArena();
+  return VERSES.filter(v=>{
+    if(!a.filters.books.includes(v.volume)) return false;
+    const p = state.progress[v.id];
+    if(a.filters.status==="memorized") return p.sealed;
+    if(a.filters.status==="not_yet") return !p.sealed;
+    return true;
+  });
+}
+function arenaDistractors(v, count){
+  const sameVol = shuffleArr(VERSES.filter(x=>x.id!==v.id && x.volume===v.volume));
+  const rest = shuffleArr(VERSES.filter(x=>x.id!==v.id && x.volume!==v.volume));
+  return sameVol.concat(rest).slice(0, count);
+}
+function pickRandomWord(){
+  const v = VERSES[Math.floor(Math.random()*VERSES.length)];
+  const words = v.text.trim().split(/\s+/).filter(w=>w.replace(/[^a-zA-Z]/g,"").length>2);
+  const w = words[Math.floor(Math.random()*words.length)] || "thing";
+  return w.replace(/[.,;:!?"“”'’]/g,"");
+}
+function scrambleLeadIn(words, start){
+  if(start <= 0) return "";
+  let leadStart = Math.max(0, start - 14);
+  let lead = words.slice(leadStart, start);
+  if(lead.length < 6 && leadStart > 0){
+    leadStart = Math.max(0, start - 20);
+    lead = words.slice(leadStart, start);
+  }
+  return `${leadStart > 0 ? "… " : ""}${lead.join(" ")}`;
+}
+function buildArenaQuestion(v, type, diffCfg){
+  const q = {v, type, ok:null, hinted:false};
+  if(type==="text2ref" || type==="ref2text" || type==="theme2ref" || type==="timedRecall"){
+    const distract = arenaDistractors(v, diffCfg.options-1);
+    q.options = shuffleArr([v].concat(distract));
+    if(type==="timedRecall") q.timeLimit = diffCfg.timer;
+  } else if(type==="finishVerse"){
+    const words = v.text.trim().split(/\s+/);
+    const cut = Math.max(2, Math.floor(words.length*0.6));
+    const tailLen = Math.max(2, words.length-cut);
+    q.lead = words.slice(0,cut).join(" ");
+    const correctEnd = words.slice(cut).join(" ");
+    const distract = arenaDistractors(v, diffCfg.options-1).map(x=>{
+      const w2 = x.text.trim().split(/\s+/);
+      return w2.slice(Math.max(0, w2.length-tailLen)).join(" ");
+    });
+    q.options = shuffleArr([correctEnd].concat(distract));
+    q.correctEnd = correctEnd;
+  } else if(type==="buildVerse"){
+    q.chunks = chunkVerse(v.text);
+    q.builtIndex = 0;
+  } else if(type==="fillBlank"){
+    const words = v.text.trim().split(/\s+/);
+    const candidates = words.map((w,i)=>({w,i})).filter(o=> o.i>0 && o.i<words.length-1 && o.w.replace(/[^a-zA-Z]/g,"").length>2);
+    const pick = candidates[Math.floor(Math.random()*candidates.length)] || {w:words[0], i:0};
+    q.blankIndex = pick.i;
+    q.words = words;
+    const clean = pick.w.replace(/[.,;:!?"“”'’]/g,"");
+    q.correctWord = clean;
+    const distract = [];
+    let guard = 0;
+    while(distract.length < diffCfg.options-1 && guard < 40){
+      guard++;
+      const w = pickRandomWord();
+      if(w.toLowerCase()!==clean.toLowerCase() && !distract.includes(w)) distract.push(w);
+    }
+    q.options = shuffleArr([clean].concat(distract));
+  } else if(type==="findError"){
+    const words = v.text.trim().split(/\s+/);
+    const idx = words.length>2 ? 1+Math.floor(Math.random()*(words.length-2)) : 0;
+    q.words = words.slice();
+    q.errorIndex = idx;
+    q.words[idx] = pickRandomWord();
+    q.retryUsed = false;
+  } else if(type==="wordScramble"){
+    const words = v.text.trim().split(/\s+/);
+    const n = Math.min(8, words.length);
+    const start = words.length > n ? Math.floor(Math.random()*(words.length-n+1)) : 0;
+    q.scrTarget = words.slice(start, start+n);
+    q.scrStart = start;
+    q.scrLead = scrambleLeadIn(words, start);
+    q.scrPool = shuffleArr(q.scrTarget.map((w,k)=>({w, k})));
+    q.scrNext = 0;
+    q.scrMiss = 0;
+    q.scrUsed = [];
+  } else if(type==="pairMatch"){
+    const trio = [v].concat(arenaDistractors(v, 2));
+    q.pairLeft = shuffleArr(trio.map(x=>({id:x.id, label:x.ref})));
+    q.pairRight = shuffleArr(trio.map(x=>({id:x.id, label:x.theme})));
+    q.pairDone = {};
+    q.pmMiss = 0;
+    q.selL = null;
+  }
+  // fullRecitation needs no extra fields — self-reported
+  return q;
+}
+function poolForMode(mode){
+  if(mode.kind==="quick" || mode.kind==="quest" || mode.kind==="blitz") return arenaFilteredPool();
+  if(mode.kind==="book") return bookAreas(mode.vol)[mode.area];
+  if(mode.kind==="grand") return grandAreas()[mode.area];
+  return [];
+}
+const QUEST_ROUND_LEN = {fullRecitation:3, buildVerse:4, wordScramble:5, pairMatch:4};
+const BLITZ_TYPES = ["text2ref","ref2text","theme2ref","fillBlank","finishVerse"];
+const BLITZ_SECONDS = 60;
+function makeArenaRound(mode){
+  const a = ensureArena();
+  const diffCfg = ARENA_DIFF[a.difficulty];
+  let rawPool = poolForMode(mode);
+  let qs;
+  if(mode.kind==="quest"){
+    let pool = rawPool.length ? rawPool : VERSES.slice();
+    if(mode.type==="fullRecitation"){
+      const sealedPool = pool.filter(v=>state.progress[v.id].sealed);
+      if(sealedPool.length) pool = sealedPool;
+    }
+    pool = shuffleArr(pool).slice(0, Math.min(QUEST_ROUND_LEN[mode.type]||6, pool.length));
+    qs = pool.map(v=> buildArenaQuestion(v, mode.type, diffCfg));
+  } else if(mode.kind==="blitz"){
+    const pool = rawPool.length >= 3 ? rawPool : VERSES.slice();
+    const seq = [];
+    while(seq.length < 30) seq.push(...shuffleArr(pool));
+    qs = seq.slice(0,30).map((v,i)=> buildArenaQuestion(v, BLITZ_TYPES[i%BLITZ_TYPES.length], diffCfg));
+  } else {
+    if(mode.kind==="quick") rawPool = shuffleArr(rawPool).slice(0, Math.min(8, rawPool.length));
+    const types = shuffleArr(ARENA_TYPES);
+    qs = rawPool.map((v,i)=> buildArenaQuestion(v, types[i%types.length], diffCfg));
+  }
+  return {
+    mode, diffCfg, qs, i:0, correct:0, combo:0, bestCombo:0, score:0,
+    hintsUsed:0, noHintCorrect:0, heartBonus:null, resealed:[], booksTouched:new Set(),
+    done:false, locked:false, newlyUnlocked:[], newQuestBadges:[], timeLeft:null, timerHandle:null,
+    blitzEnd:null, blitzTimer:null
+  };
+}
+/* Jump straight into a quest's own challenge type — the quest card IS the game mode. */
+function startQuestRound(questId){
+  const def = questDef(questId);
+  if(!def) return;
+  const a = ensureArena();
+  const quests = ensureArenaQuests(a);
+  const inst = quests.list.find(q=>q.id===questId);
+  if(inst && inst.done){
+    view.tab = "trials";
+    view.trialRound = null;
+    view.arenaStatsOpen = true;
+    render();
+    showToast(`${def.emoji} <strong>${def.name}</strong> is already won today. Its chest is on your Quest Shelf.`);
+    window.scrollTo({top:0});
+    return;
+  }
+  let round;
+  if(def.track==="type") round = makeArenaRound({kind:"quest", type:def.type, questId});
+  else if(def.track==="buildStep") round = makeArenaRound({kind:"quest", type:def.type, questId});
+  else if(def.track==="blitz") round = makeArenaRound({kind:"blitz", questId});
+  else round = makeArenaRound({kind:"quick", questId});
+  if(!round.qs.length){ showToast("No scriptures match your Arena filters yet — study one first."); return; }
+  view.trialRound = round;
+  view.tab = "trials";
+  render();
+  window.scrollTo({top:0});
+}
+function unlockArenaAchievement(T, id){
+  const a = ensureArena();
+  if(a.achievements.includes(id)) return;
+  a.achievements.push(id);
+  T.newlyUnlocked.push(id);
+}
+function finishArenaSession(T){
+  const a = ensureArena();
+  if(T.blitzTimer){ clearInterval(T.blitzTimer); T.blitzTimer = null; }
+  const answered = T.qs.filter(q=>q.ok!==null).length;
+  const total = T.mode.kind==="blitz" ? answered : T.qs.length;
+  const perfect = T.mode.kind==="blitz" ? false : (total>0 && T.correct === total);
+  if(T.mode.kind==="blitz"){
+    a.blitz.played += 1;
+    a.blitz.best = Math.max(a.blitz.best, T.correct);
+    T.newQuestBadges = T.newQuestBadges.concat(setArenaQuestProgress(a, def=>def.track==="blitz", T.correct));
+    if(T.correct >= 15) unlockArenaAchievement(T, "blitz_ace");
+  }
+  const completedForHeartBonus = total > 0 && T.correct > 0 && (T.mode.kind==="blitz" ? answered > 0 : answered === total);
+  if(completedForHeartBonus){
+    if(T.hintsUsed === 0){
+      T.heartBonus = {
+        xp:25,
+        label:"Heartstrong Finish",
+        desc:"Completed without using a heart. Bonus XP!"
+      };
+    } else if(T.hintsUsed === 1){
+      T.heartBonus = {
+        xp:10,
+        label:"One-Heart Climb",
+        desc:"Completed using only 1 heart. Good job!"
+      };
+    }
+    if(T.heartBonus) T.score += T.heartBonus.xp;
+  }
+  a.score.total += T.score;
+  a.score.best = Math.max(a.score.best, T.score);
+  a.streakBest = Math.max(a.streakBest, T.bestCombo);
+  T.booksTouched.forEach(vol=>{ if(!a.booksPracticed.includes(vol)) a.booksPracticed.push(vol); });
+
+  unlockArenaAchievement(T, "first_session");
+  if(T.bestCombo >= 10) unlockArenaAchievement(T, "streak10");
+  if(perfect) unlockArenaAchievement(T, "perfect");
+  if(VOLUME_ORDER.every(vol=>a.booksPracticed.includes(vol))) unlockArenaAchievement(T, "all_books");
+
+  a.stats.sessions += 1;
+  a.stats.hintsUsed += T.hintsUsed;
+  a.stats.resealedCount += T.resealed.length;
+  T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="session", 1));
+  if(perfect) T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="perfect", 1));
+
+  if(T.mode.kind==="book"){
+    const complete = perfect;
+    if(complete){
+      a.bookMastery[T.mode.vol].areas[T.mode.area] = true;
+      unlockArenaAchievement(T, "book_area");
+      if(a.bookMastery[T.mode.vol].areas.every(Boolean)) unlockArenaAchievement(T, "book_mastery");
+    }
+  } else if(T.mode.kind==="grand"){
+    if(perfect){
+      a.grand.areas[T.mode.area] = true;
+      if(a.grand.areas.every(Boolean)) unlockArenaAchievement(T, "grand_mastery");
+    }
+  }
+  const masteredCount = VERSES.filter(v=>state.progress[v.id].sealed).length;
+  if(masteredCount>=25) unlockArenaAchievement(T, "mastered25");
+  if(masteredCount>=50) unlockArenaAchievement(T, "mastered50");
+  if(masteredCount>=100) unlockArenaAchievement(T, "mastered100");
+
+  state.xp += T.score;
+  touchStreak();
+  saveState();
+}
+function scoreForType(type){
+  if(type==="fullRecitation") return 25;
+  if(type==="buildVerse" || type==="timedRecall" || type==="wordScramble" || type==="pairMatch") return 15;
+  return 10;
+}
+function settleAnswer(T, q, correct, opts){
+  opts = opts || {};
+  q.ok = correct;
+  if(q.timerHandle){ clearInterval(q.timerHandle); q.timerHandle=null; }
+  T.booksTouched.add(q.v.volume);
+  const a = ensureArena();
+  a.stats.totalAnswered += 1;
+  a.stats.byType[q.type].played += 1;
+  if(correct){
+    T.combo += 1;
+    T.bestCombo = Math.max(T.bestCombo, T.combo);
+    T.correct += 1;
+    let gained = scoreForType(q.type) + Math.min(20, (T.combo-1)*2);
+    if(!q.hinted){ gained += 5; T.noHintCorrect += 1; }
+    if(opts.penalty) gained = Math.max(3, gained - opts.penalty);
+    T.score += gained;
+    q.gained = gained;
+    a.stats.totalCorrect += 1;
+    a.stats.byType[q.type].correct += 1;
+    T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="type" && def.type===q.type, 1));
+    T.newQuestBadges = T.newQuestBadges.concat(setArenaQuestProgress(a, def=>def.track==="streak", T.combo));
+    const p = state.progress[q.v.id];
+    if(isDue(p)){
+      const res = resealVerse(p);
+      T.score += res.xp;
+      T.resealed.push(q.v);
+      emitBridge(res.eternal ? "eternal" : "reseal", q.v, res.xp);
+    }
+    if(q.type==="fullRecitation" && !q.hinted && p.sealed){
+      const T2 = view.trialRound;
+      if(T2) unlockArenaAchievement(T2, "recite_no_hints");
+    }
+  } else {
+    T.combo = 0;
+  }
+  saveState(); /* persist stats + quest progress per answer, not just at session end */
+}
+function recordArenaQuestStep(T, matchFn, amount){
+  const a = ensureArena();
+  T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, matchFn, amount || 1));
+  saveState();
+}
+function questHudHTML(T){
+  const questId = T.mode.questId;
+  if(!questId) return "";
+  const a = ensureArena();
+  const quests = ensureArenaQuests(a);
+  const inst = quests.list.find(q=>q.id===questId);
+  const def = questDef(questId);
+  if(!inst || !def) return "";
+  const pct = Math.round((inst.progress/inst.goal)*100);
+  return `
+    <div class="quest-hud">
+      <div class="quest-hud-top"><span>${def.emoji} ${def.name}</span><span class="quest-progress">${inst.progress}/${inst.goal}</span></div>
+      <div class="quest-hud-desc">${def.desc}</div>
+      <span class="quest-bar"><i style="width:${pct}%"></i></span>
+    </div>`;
+}
+function chunkVerseOptions(q){ return q.options; }
+
+/* ---- SQ registry (generated by T2 split; see ROADMAP.md §7) ---- */
+SQ.shuffleArr = shuffleArr;
+SQ.trialPool = trialPool;
+SQ.trialSnippet = trialSnippet;
+SQ.ARENA_DIFF = ARENA_DIFF;
+SQ.ARENA_TYPES = ARENA_TYPES;
+SQ.ARENA_TYPE_LABEL = ARENA_TYPE_LABEL;
+SQ.ARENA_ACHIEVEMENTS = ARENA_ACHIEVEMENTS;
+SQ.ARENA_TITLES = ARENA_TITLES;
+SQ.ARENA_HEART_MAX = ARENA_HEART_MAX;
+SQ.arenaTitleFor = arenaTitleFor;
+SQ.ARENA_QUEST_POOL = ARENA_QUEST_POOL;
+SQ.ensureArenaQuests = ensureArenaQuests;
+SQ.questDef = questDef;
+SQ.bumpArenaQuests = bumpArenaQuests;
+SQ.setArenaQuestProgress = setArenaQuestProgress;
+SQ.ensureArena = ensureArena;
+SQ.arenaHeartCount = arenaHeartCount;
+SQ.refillArenaHearts = refillArenaHearts;
+SQ.arenaHeartsHTML = arenaHeartsHTML;
+SQ.refreshArenaHeartBanks = refreshArenaHeartBanks;
+SQ.spendArenaHeart = spendArenaHeart;
+SQ.bookAreas = bookAreas;
+SQ.grandAreas = grandAreas;
+SQ.arenaFilteredPool = arenaFilteredPool;
+SQ.arenaDistractors = arenaDistractors;
+SQ.pickRandomWord = pickRandomWord;
+SQ.scrambleLeadIn = scrambleLeadIn;
+SQ.buildArenaQuestion = buildArenaQuestion;
+SQ.poolForMode = poolForMode;
+SQ.QUEST_ROUND_LEN = QUEST_ROUND_LEN;
+SQ.BLITZ_TYPES = BLITZ_TYPES;
+SQ.BLITZ_SECONDS = BLITZ_SECONDS;
+SQ.makeArenaRound = makeArenaRound;
+SQ.startQuestRound = startQuestRound;
+SQ.unlockArenaAchievement = unlockArenaAchievement;
+SQ.finishArenaSession = finishArenaSession;
+SQ.scoreForType = scoreForType;
+SQ.settleAnswer = settleAnswer;
+SQ.recordArenaQuestStep = recordArenaQuestStep;
+SQ.questHudHTML = questHudHTML;
+SQ.chunkVerseOptions = chunkVerseOptions;

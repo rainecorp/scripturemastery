@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""
+T2 · Mechanical code split for Scripture Quest.  (historical tool)
+
+Cuts the old single-file index.html into css/, data/, js/ along verified
+boundaries. The extracted bodies are VERBATIM: no reordering, renaming,
+reformatting or "improvement". Each JS file gets an appended, clearly
+delimited SQ-registry footer (additive only), and index.html becomes an
+ordered shell of <link> and <script> tags.
+
+    python3 tools/split-from-baseline.py            # regenerate the split
+    python3 tools/split-from-baseline.py --verify   # prove it is verbatim
+
+Both modes read the original from the `SPLIT_BASE` git tag, never from the
+working tree — after the first run index.html is the shell, so reading it
+would produce nonsense. That also makes the script idempotent.
+
+THIS IS NOT A CI GATE. It documents and audits the T2 commit only. From T3
+onward the split files are edited on purpose, so --verify is *expected* to
+report divergence; it stays useful for answering "what did this file look
+like before the split touched it", and nothing more. Do not wire it into a
+test runner and do not "fix" a later divergence by re-running the generator
+— that would silently discard real work.
+"""
+import os, re, sys, hashlib
+
+ROOT = "/Users/boss-mode/Documents/scripture mastery/scripture-tower"
+SRC  = os.path.join(ROOT, "index.html")
+
+# ---------------------------------------------------------------- manifest --
+# (relative path, first line, last line, kind)  -- 1-indexed, inclusive.
+CSS = [
+    ("css/01-base.css",        11,  832, "tokens, reset, app shell, buttons, cards, generic components"),
+    ("css/02-towers.css",     833, 1394, "towers, relics, today, review system; hero segue; relics on the tower"),
+    ("css/03-ceremony.css",  1395, 1621, "seal ceremony, relic popup, Prove It stage"),
+    ("css/04-pages.css",     1622, 1832, "relic shelf, tower page, today card, trial grounds"),
+    ("css/05-arena.css",     1833, 1951, "arena setup, stats, quests, in-session extras"),
+    ("css/06-ui-v2.css",     1952, 2216, "game feel, header v2, tabs v2, greeting, daily check-in, achievements, share"),
+    ("css/07-arena-v2.css",  2217, 2356, "arena v2 game modes, blitz, new question types"),
+    ("css/08-responsive.css",2357, 2392, "fx canvas, reduced motion, responsive polish"),
+]
+
+JS = [
+    ("data/passages.js",       2405, 2918, "the DATA literal — 100 passages keyed by volume. T9 splits this per track."),
+    ("js/01-catalog.js",       2919, 2990, "VOLUME_ORDER, verseIdFor, VERSES build, POPULAR_REFS, difficulty tiers"),
+    ("js/02-towers-data.js",   2991, 3055, "TOWERS per volume, RELICS, fallback emoji"),
+    ("js/03-state.js",         3056, 3250, "climber, STORE_KEY, load/persist/save, boot migrations, personal climb, streak"),
+    ("js/04-review.js",        3251, 3310, "seal/re-seal/eternal, REVIEW_LADDER scheduling, due lists, RANKS"),
+    ("js/05-relics.js",        3311, 3427, "shard rendering, relic art/HTML, condition badge, relic popup, chests"),
+    ("js/06-helpers.js",       3428, 3475, "tower stats, recommended verse, toast, openStudy"),
+    ("js/07-sfx.js",           3476, 3523, "WebAudio synth — no files, no dependencies"),
+    ("js/08-fx.js",            3524, 3596, "canvas confetti bursts and celebrations"),
+    ("js/09-checkin.js",       3597, 3643, "daily check-in, journey milestones"),
+    ("js/10-achievements.js",  3644, 3849, "achievement definitions, progress, sweep, overlay"),
+    ("js/11-share.js",         3850, 4003, "share text, canvas share card, share popup"),
+    ("js/12-ceremony.js",      4004, 4058, "seal ceremony — chest opens, relic rises"),
+    ("js/13-shelf.js",         4059, 4104, "the trophy room"),
+    ("js/14-arena.js",         4105, 4603, "arena engine: types, quests, hearts, question building, scoring"),
+    ("js/15-arena-views.js",   4604, 5413, "arena screens: trials, setup, session, results"),
+    ("js/16-shell.js",         5414, 5519, "view state, app element, render() dispatch, filter chips"),
+    ("js/17-today.js",         5520, 5859, "Today — the base camp"),
+    ("js/18-towers.js",        5860, 6196, "towers overview, TV_ASSET geometry, tower visual, tower detail"),
+    ("js/19-library.js",       6197, 6297, "library filters, cards, list"),
+    ("js/20-text.js",          6298, 6365, "tokenize, isWord, escHTML, verse number markers"),
+    ("js/21-highlight.js",     6366, 6529, "Scripture Intelligence highlighting: roles, lexicon, phrases"),
+    ("js/22-study.js",         6530, 6748, "renderVerseHTML, blank picking, the study screen"),
+    ("js/23-proveit.js",       6749, 6913, "Prove It — order-recall puzzle"),
+    ("js/24-boot.js",          6914, 6917, "load-time achievement sweep and first render"),
+    ("js/25-bridge.js",        6918, 6981, "username-system bridge (usernames.html)"),
+]
+
+CSS_OPEN, CSS_CLOSE = 10, 2393     # <style> ... </style>
+JS_OPEN,  JS_CLOSE  = 2404, 6982   # <script> ... </script>
+
+FOOTER_MARK = "/* ---- SQ registry (generated by T2 split; see ROADMAP.md §7) ---- */"
+
+# ------------------------------------------------------------------ helpers --
+DECL = re.compile(r'^(?:(const|let|var)\s+([A-Za-z_$][\w$]*)|(?:async\s+)?(function)\s+([A-Za-z_$][\w$]*)|(class)\s+([A-Za-z_$][\w$]*))')
+
+def top_level_decls(lines):
+    """Top-level (column-0) declarations, in order, deduped. Column 0 is the
+    original nesting depth of this code inside the single <script>."""
+    out, seen = [], set()
+    for ln in lines:
+        m = DECL.match(ln)
+        if not m:
+            continue
+        if m.group(1):
+            kind, name = m.group(1), m.group(2)
+        elif m.group(3):
+            kind, name = "function", m.group(4)
+        else:
+            kind, name = "const", m.group(6)
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append((kind, name))
+    return out
+
+def sq_footer(decls):
+    """Additive registry. `const`/`function` bind by value; `let`/`var` bind
+    through an accessor so a later reassignment is never stale."""
+    if not decls:
+        return ""
+    body = ["", FOOTER_MARK]
+    for kind, name in decls:
+        if kind in ("let", "var"):
+            body.append(f'Object.defineProperty(SQ,"{name}",{{get:()=>{name},set:v=>{{{name}=v;}},enumerable:true,configurable:true}});')
+        else:
+            body.append(f"SQ.{name} = {name};")
+    return "\n".join(body) + "\n"
+
+def header(path, desc, first, last):
+    return (f"/* {os.path.basename(path)}\n"
+            f"   {desc}\n"
+            f"   Extracted verbatim from index.html lines {first}-{last} by T2. */\n")
+
+# --------------------------------------------------------------------- main --
+def main():
+    # Always source from the ORIGINAL single-file build in the baseline commit,
+    # never from the working tree — after the first run index.html is the shell,
+    # so reading it would produce nonsense. This also makes the script idempotent.
+    import subprocess
+    raw = subprocess.run(["git", "-C", ROOT, "show", "SPLIT_BASE:index.html"],
+                         capture_output=True, text=True, check=True).stdout
+    print(f"source: SPLIT_BASE:index.html ({len(raw)} bytes, "
+          f"md5 {hashlib.md5(raw.encode()).hexdigest()})")
+    lines = raw.split("\n")          # lines[i] is 1-indexed line i+1
+
+    def seg(a, b):
+        return "\n".join(lines[a-1:b])
+
+    # sanity: the manifest must tile each block with no gaps or overlaps
+    for name, spec, lo, hi in (("CSS", CSS, CSS_OPEN+1, CSS_CLOSE-1),
+                               ("JS",  JS,  JS_OPEN+1,  JS_CLOSE-1)):
+        cur = lo
+        for row in spec:
+            if row[1] != cur:
+                sys.exit(f"{name}: gap/overlap at {row[0]} — expected start {cur}, got {row[1]}")
+            cur = row[2] + 1
+        if cur != hi + 1:
+            sys.exit(f"{name}: manifest ends at {cur-1}, block ends at {hi}")
+    print("manifest tiles both blocks exactly — no gaps, no overlaps")
+
+    if "--verify" in sys.argv:
+        return verify(lines, seg)
+
+    os.makedirs(os.path.join(ROOT, "css"), exist_ok=True)
+    os.makedirs(os.path.join(ROOT, "js"), exist_ok=True)
+    os.makedirs(os.path.join(ROOT, "data"), exist_ok=True)
+
+    for path, a, b, desc in CSS:
+        body = seg(a, b)
+        out = f"/* {os.path.basename(path)} — {desc}\n   Verbatim from index.html lines {a}-{b} (T2). Order is load-bearing: the\n   cascade depends on these files staying in numeric order. */\n" + body
+        if not out.endswith("\n"):
+            out += "\n"
+        open(os.path.join(ROOT, path), "w", encoding="utf-8").write(out)
+        print(f"  {path:26s} {b-a+1:5d} lines")
+
+    # namespace first — every other file's footer writes into it
+    open(os.path.join(ROOT, "js/00-namespace.js"), "w", encoding="utf-8").write(
+        '/* 00-namespace.js\n'
+        '   The one global this app adds. Every split file registers its top-level\n'
+        '   bindings on SQ so the later ES-module conversion (T15) is mechanical.\n'
+        '   The in-file bindings remain authoritative; SQ is a registry, not a\n'
+        '   replacement. New in T2 — the only non-verbatim JS in the split. */\n'
+        'var SQ = window.SQ || (window.SQ = {});\n')
+    print(f"  {'js/00-namespace.js':26s}     5 lines   (new)")
+
+    total_exports = 0
+    for path, a, b, desc in JS:
+        body = seg(a, b)
+        decls = top_level_decls(body.split("\n"))
+        total_exports += len(decls)
+        out = header(path, desc, a, b) + body
+        if not out.endswith("\n"):
+            out += "\n"
+        out += sq_footer(decls)
+        open(os.path.join(ROOT, path), "w", encoding="utf-8").write(out)
+        print(f"  {path:26s} {b-a+1:5d} lines   {len(decls):3d} exports")
+
+    print(f"\n{total_exports} bindings registered on SQ")
+    write_shell(lines)
+
+def write_shell(lines):
+    head = "\n".join(lines[0:9])          # lines 1-9
+    body_divs = "\n".join(lines[2394:2402])  # lines 2395-2402 (<body> .. last div)
+
+    css_tags = "\n".join(f'<link rel="stylesheet" href="{p}">' for p, *_ in CSS)
+    js_tags  = ['<script src="js/00-namespace.js"></script>']
+    js_tags += [f'<script src="{p}"></script>' for p, *_ in JS]
+
+    shell = f"""{head}
+{css_tags}
+</head>
+{body_divs}
+
+<!-- ===========================================================
+     Classic <script> tags, in dependency order. NOT ES modules:
+     type="module" is CORS-blocked over file://, and this app must
+     keep working when someone unzips it and double-clicks
+     index.html. Revisit when it is served over HTTP (T15).
+
+     The order below is the order this code appeared in the old
+     single-file build, and it is load-bearing: 03-state.js runs
+     its migrations at load, 24-boot.js calls render(). Do not
+     reorder these tags without reading ROADMAP.md §7.
+     =========================================================== -->
+{chr(10).join(js_tags)}
+</body>
+</html>
+"""
+    open(os.path.join(ROOT, "index.html"), "w", encoding="utf-8").write(shell)
+    print(f"\nindex.html rewritten: {len(shell.splitlines())} lines")
+
+def verify(lines, seg):
+    """Concatenate what we wrote (minus generated headers/footers) and compare
+    to the original ranges, byte for byte."""
+    ok = True
+    for path, a, b, _ in CSS + JS:
+        disk = open(os.path.join(ROOT, path), encoding="utf-8").read()
+        # drop the generated leading comment block
+        stripped = disk.split("*/\n", 1)[1]
+        # drop the generated SQ footer. The footer starts with "\n" + MARK, and
+        # the body already carries its own trailing newline, so splitting is
+        # enough — adding one back would over-count by a byte.
+        if FOOTER_MARK in stripped:
+            stripped = stripped.split("\n" + FOOTER_MARK, 1)[0]
+        original = seg(a, b)
+        if not original.endswith("\n"):
+            original += "\n"
+        if stripped != original:
+            ok = False
+            print(f"  MISMATCH {path}")
+            print(f"    disk md5 {hashlib.md5(stripped.encode()).hexdigest()}  {len(stripped)} bytes")
+            print(f"    orig md5 {hashlib.md5(original.encode()).hexdigest()}  {len(original)} bytes")
+        else:
+            print(f"  ok  {path:26s} {len(original):7d} bytes")
+    print("\nVERBATIM" if ok else "\nDIVERGENCE — do not commit")
+    return 0 if ok else 1
+
+if __name__ == "__main__":
+    sys.exit(main() or 0)

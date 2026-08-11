@@ -1,0 +1,121 @@
+/* 05-arena.css — arena setup, stats, quests, in-session extras
+   Verbatim from index.html lines 1833-1951 (T2). Order is load-bearing: the
+   cascade depends on these files staying in numeric order. */
+  /* =========================================================
+     ARENA SETUP — filters, difficulty, challenge formats
+     ========================================================= */
+  .arena-setup{max-width:none; margin:0 auto;}
+  .arena-setup > p, .arena-setup .arena-rank{max-width:450px; margin-left:auto; margin-right:auto;}
+  .arena-stats{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;}
+  .arena-card, .af-active-line, .arena-badges, .af-steps{max-width:640px; margin-left:auto; margin-right:auto;}
+  .arena-formats{max-width:none;}
+  .af-section{margin-bottom:18px; text-align:left;}
+  .af-title{font-size:11px; font-weight:950; letter-spacing:.12em; text-transform:uppercase; color:#a78bfa; margin-bottom:8px;}
+  .af-row{display:flex; flex-wrap:wrap; gap:7px;}
+  .af-chip{
+    appearance:none; border:1px solid rgba(255,255,255,.16); border-radius:999px;
+    background:rgba(255,255,255,.05); color:#cabffa;
+    padding:7px 13px; font-family:var(--font); font-size:12px; font-weight:900;
+    cursor:pointer; transition:transform .08s, background .15s, border-color .15s;
+  }
+  .af-chip.active{color:#3a2205; border-color:#facc15; background:linear-gradient(180deg,#fef3c7,#fbbf24); box-shadow:0 0 14px rgba(251,191,36,.4);}
+  .af-chip:active{transform:translateY(1px);}
+  .af-active-line{
+    margin-bottom:16px; padding:9px 12px; border-radius:14px; text-align:left;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+    color:#b9aef2; font-size:11.5px; font-weight:800; line-height:1.5;
+  }
+  .arena-formats{display:grid; gap:14px; margin-top:6px;}
+  @media (min-width:760px){
+    .arena-formats{grid-template-columns:1fr 1fr; align-items:start;}
+  }
+  .arena-card{
+    padding:16px; border-radius:18px; text-align:left;
+    background:linear-gradient(160deg, rgba(20,16,46,.7), rgba(9,7,22,.85));
+    border:1px solid rgba(167,139,250,.28);
+  }
+  .arena-card h4{margin:0 0 4px; font-family:"Cinzel",Georgia,serif; font-size:16px; font-weight:800; color:#f2eefc;}
+  .arena-card p{margin:0 0 10px; font-size:12px; color:#b9aef2; font-weight:700; line-height:1.5;}
+  .arena-book-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;}
+  .arena-book-card{
+    padding:12px; border-radius:14px; text-align:left;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); cursor:pointer;
+    transition:transform .1s, border-color .15s;
+  }
+  .arena-book-card:hover{transform:translateY(-2px); border-color:rgba(167,139,250,.5);}
+  .arena-book-card .abc-name{font-family:"Cinzel",Georgia,serif; font-size:13px; font-weight:800; color:#f2eefc;}
+  .arena-book-card .abc-sub{margin-top:2px; font-size:10.5px; font-weight:800; color:#9c93c9;}
+  .arena-book-card .abc-areas{display:flex; gap:4px; margin-top:8px;}
+  .abc-area-dot{flex:1; height:7px; border-radius:999px; background:rgba(255,255,255,.14);}
+  .abc-area-dot.done{background:linear-gradient(90deg,#34d399,#10b981); box-shadow:0 0 6px rgba(52,211,153,.5);}
+  .arena-badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin:14px 0;}
+  .arena-badge{
+    width:44px; height:44px; border-radius:12px; display:grid; place-items:center; font-size:20px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); opacity:.3; filter:grayscale(1);
+  }
+  .arena-badge.on{opacity:1; filter:none; border-color:rgba(251,191,36,.55); background:rgba(251,191,36,.12); box-shadow:0 0 12px rgba(251,191,36,.35);}
+  .arena-badge{cursor:pointer;}
+  .arena-badge-wrap{display:flex; flex-direction:column; align-items:center; width:60px;}
+  .arena-badge-label{margin-top:4px; font-size:9px; font-weight:800; color:#9c93c9; text-align:center; line-height:1.25;}
+  .arena-rank{color:#fde68a; font-weight:950; font-size:13px; margin-bottom:4px;}
+  .af-toggle{
+    margin:4px 0 14px; padding:10px 14px; border-radius:14px; text-align:center; cursor:pointer;
+    background:rgba(255,255,255,.05); border:1px dashed rgba(167,139,250,.4);
+    color:#cabffa; font-size:12.5px; font-weight:900;
+  }
+  .af-toggle:hover{border-color:rgba(167,139,250,.7); color:#f2eefc;}
+  .af-steps{margin-bottom:8px;}
+
+  /* ---- Arena stats ---- */
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .stat-tile{padding:10px 6px; border-radius:12px; text-align:center; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);}
+  .stat-tile .st-n{font-family:"Cinzel",Georgia,serif; font-size:19px; font-weight:800; color:#fde68a;}
+  .stat-tile .st-l{margin-top:2px; font-size:9.5px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:#9c93c9;}
+  .type-stat-list{display:flex; flex-direction:column; gap:7px;}
+  .type-stat-row{display:grid; grid-template-columns:118px 1fr 38px; align-items:center; gap:8px;}
+  .ts-label{font-size:11px; font-weight:800; color:#cabffa;}
+  .ts-bar{display:block; height:7px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden;}
+  .ts-bar i{display:block; height:100%; background:linear-gradient(90deg,#a78bfa,#60a5fa);}
+  .ts-val{font-size:10.5px; font-weight:900; color:#9c93c9; text-align:right;}
+
+  /* ---- Arena quests + quest shelf ---- */
+  .quest-list{display:flex; flex-direction:column; gap:10px;}
+  .quest-item{
+    display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+  }
+  .quest-item.done{border-color:rgba(52,211,153,.55); background:rgba(52,211,153,.1);}
+  .quest-item.done .quest-bar i{background:linear-gradient(90deg,#fde68a,#34d399);}
+  .quest-item.done .quest-progress{color:#86efac;}
+  .quest-chest{flex-shrink:0;}
+  .quest-info{flex:1; min-width:0;}
+  .quest-name{font-size:12.5px; font-weight:900; color:#f2eefc;}
+  .quest-desc{margin-top:1px; font-size:10.5px; font-weight:700; color:#9c93c9;}
+  .quest-bar{display:block; height:6px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; margin-top:6px;}
+  .quest-bar i{display:block; height:100%; background:linear-gradient(90deg,#34d399,#10b981);}
+  .quest-progress{flex-shrink:0; font-size:11px; font-weight:950; color:#fde68a;}
+  .quest-shelf-grid{display:flex; flex-wrap:wrap; gap:10px; margin-top:6px;}
+  .quest-shelf-badge{position:relative; width:52px; text-align:center;}
+  .qsb-emoji{
+    position:absolute; left:50%; top:2px; transform:translateX(-50%); font-size:16px;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  }
+
+  /* ---- in-session extras ---- */
+  .ta-score{font-size:13px; font-weight:950; color:#fde68a;}
+  .ta-timer-wrap{height:5px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; margin-bottom:10px;}
+  .ta-timer-bar{display:block; height:100%; background:linear-gradient(90deg,#34d399,#fbbf24,#f87171); transition:width 1s linear;}
+  .tq-lead{font-family:Georgia,"Times New Roman",serif; font-size:15.5px; line-height:1.55; color:#f2eefc;}
+  .tq-lead .blank-slot{display:inline-block; min-width:52px; border-bottom:2px dashed rgba(167,139,250,.6); color:transparent;}
+  .fe-words{font-family:Georgia,"Times New Roman",serif; font-size:15.5px; line-height:1.8; color:#f2eefc;}
+  .fe-word{cursor:pointer; padding:1px 3px; border-radius:5px; transition:background .12s;}
+  .fe-word:hover{background:rgba(167,139,250,.22);}
+  .fe-word.picked-wrong{background:rgba(248,113,113,.3);}
+  .fe-word.picked-right{background:rgba(52,211,153,.3);}
+  .recite-btns{display:flex; flex-direction:column; gap:10px; max-width:320px; margin:0 auto;}
+  .hint-row{margin-top:10px;}
+  .hint-btn{
+    appearance:none; border:1px dashed rgba(255,255,255,.25); border-radius:12px; background:transparent;
+    color:#9c93c9; font-size:11.5px; font-weight:800; padding:7px 12px; cursor:pointer;
+  }
+  .hint-btn:hover{color:#cabffa; border-color:rgba(167,139,250,.5);}
