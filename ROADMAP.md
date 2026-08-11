@@ -497,10 +497,32 @@ Re-use that harness for T3 and T6. A refactor that can't produce this evidence i
 **DoD** — `index.html` < 200 lines · double-click still works · every screen renders identically (Today, Towers, tower detail, Study, Prove It, Arena setup/session across all 11 types/results, Shelf, Collection, achievements, relic popup, share, ceremony) · zero console errors or 404s · before/after screenshot diff shows no change.
 *Shipped:* 6,984 lines → **67-line shell + 8 CSS + 26 JS**, all bodies verbatim, 198 bindings on `SQ` (`let`/`var` via live accessors so nothing goes stale). Evidence in §7.4: byte-identical reassembly, 82/84 fingerprints unchanged, runs from `file://`. Screenshot diff was **superseded by** the DOM+computed-style fingerprint, which is strictly stronger — it compares markup and resolved styles exactly rather than by eye, and covers 76 states instead of a handful.
 
-**T3 · The canonical tokenizer ★**
+**T3 · The canonical tokenizer ★** — ✅ **DONE**
 The app has four incompatible notions of "word position": `tokenize()`+`isWord()` (`:6301`), `split(/\s+/)` (`:4342`, `:4357`, `:4373`, `:4380`), `clean.split(" ")` (`:6757`), `text.split(" ")` (`:3910`). **Verified: 7 of 100 passages already disagree** — JS—History 1:15–20 (503 vs 504), D&C 19:16–19 (89 vs 91), D&C 58:42–43, 64:9–11, 76:22–24, 121:34–36, 130:20–21. The divergence accumulates mid-passage, so it can't be corrected after the fact. Trouble maps, first-letter, phrase drills, and speech alignment all silently corrupt without this.
 **Scope** — `js/tokenize.js` returning `{ index, raw, norm, isWord, isVerseMark, leadPunct, firstLetter, tailPunct }`. `norm` = lowercased, curly quotes/dashes normalized, punctuation stripped — used for all comparison. `index` counts `isWord` tokens only and is the *one* meaning of word position. Migrate every consumer; delete all other tokenizers.
 **DoD** — test asserts Study index === Arena index across all passages, the 7 known cases pass · covers curly/straight apostrophes, em/en dashes, leading `"`/`(`, trailing punctuation, verse markers, `D&C`, `Joseph Smith—History`, hyphenates, numerals · no `split(" ")` or `split(/\s+/)` remains in `js/` or `data/`.
+
+*Shipped as `js/00-tokenize.js`* (tier 00 = pure, no dependencies), with `tests/tokenize.test.js` — **79 assertions, no framework, `node tests/tokenize.test.js`**.
+
+**The single cause, confirmed:** all seven divergences are a free-standing em dash. The study path skipped it (no `\w`), the other three counted it as a word. Nothing else in the corpus diverged — the text is otherwise clean (single spaces, no digits, no tabs).
+
+**Two API decisions worth knowing:**
+- **Tokens cover the whole string, whitespace included**, so `tokenize(t).map(x=>x.raw).join("") === t` always. Renderers walk tokens; only `isWord` tokens carry an `index`. That separation is what lets the em dash keep its place on screen while occupying no word position.
+- **`spanByWords(text, from, to)`** cuts the *source* between two word positions instead of rejoining word tokens with spaces. Rejoining would have silently deleted every free-standing dash from Prove It, Finish the Verse and the snippets. Spans run start-of-word to start-of-word, so consecutive spans partition the text exactly; a test asserts this holds at three step sizes across all 100 passages.
+
+**Behaviour change, reviewed one by one.** 64 of 84 fingerprints unchanged, including `fn.renderVerseHTML` (all 100 passages × 4 stages), `fn.classifyVerse`, `fn.verseNumbers`, and all 11 Arena question types. All 20 that moved trace to the corrected word counts, and **exactly one is user-visible beyond a number**: `D&C 19:16–19` counted 91 words and now counts 89, which moves it across the 90-word boundary from **Challenge ⛈️ to Hard 🌧️** — so its relic goes Gold → Green Gold. That is the correct tier; the old count was two phantom dashes.
+
+`isVerseMark` is opt-in (`tokenize(text, {verseMarks:true})`) rather than "digits are verse numbers". No shipped passage contains a digit, so guessing would only have created the risk of silently demoting a real numeral out of the word index — the exact bug class this ticket exists to end. T10 turns it on for numbered text.
+
+### Defects found in flight
+
+Found while doing T3, deliberately **not** fixed there — T3 was a tokenizer unification, and folding in output changes would have made the 20 fingerprint movements unreviewable. Both are now one-liners because the tokenizer exposes what they need.
+
+**D1 · Multi-verse numbering never worked.** `verseNumberMarks()` ([js/20-text.js](scripture-tower/js/20-text.js)) detects sentence ends with `else if(/[.!?]/.test(tok))` on *non-word* tokens. But sentence punctuation is glued to the word before it (`earth.`), so that token is a word and never reaches the branch — only whitespace and lone dashes do. `sentenceStarts` is therefore always `[0]`, and every multi-verse passage renders a single verse number at word 0 instead of one per verse. Fix: test `t.tailPunct` on word tokens. Marked in the source.
+
+**D2 · The first-letter stage leaks words that open with a quote.** `renderVerseHTML()` stage 3 ([js/22-study.js](scripture-tower/js/22-study.js)) builds its stub with `/^(\w)(\w*)(.*)$/`, which cannot match a token starting with punctuation, and the `if(!m)` fallback returns **the whole word**. Three tokens in Joseph Smith—History (`“they`, `“Never`, `“I`) render in full at the hardest study stage. Fix: build the stub from `leadPunct + firstLetter + "…" + tailPunct`. Belongs with §6, since that section is rewriting this exact code path.
+
+**D3 · Two dead branches, preserved and labelled.** The second lead-in width in `scrambleLeadIn()` is unreachable (`start < 14` forces `leadStart` to 0), as is D1's sentence branch. Both are commented in place rather than removed, so the next person doesn't "fix" a behaviour that was never running.
 
 **T4 · Text sourcing, verification, storage guard**
 Source Seminary text from the 1920/1921 editions (§3.4). **Diff against the current edition and record every passage that differs** — that diff is the risk register. Add `textVerifiedAt` + `textHash` to every passage; unverified text renders a marker. Wrap `persistState()` (`:3125`) in try/catch — on `QuotaExceededError` shed the detail log first, never progress, and warn visibly. Add a storage budget and a `Storage used: N KB` line in Settings.

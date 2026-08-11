@@ -2,11 +2,10 @@
    renderVerseHTML, blank picking, the study screen
    Extracted verbatim from index.html lines 6530-6748 by T2. */
 function renderVerseHTML(text, stage, blanked, marks, smart){
-  const toks=tokenize(text);
-  let wIdx=0;
-  return toks.map(tok=>{
-    if(!isWord(tok)) return escHTML(tok);
-    const myIdx=wIdx++;
+  return tokenize(text).map(t=>{
+    if(!t.isWord) return escHTML(t.raw);
+    const tok=t.raw;
+    const myIdx=t.index;
     const safeTok=escHTML(tok);
     const hideThis=blanked.has(myIdx);
     const num=marks&&marks.has(myIdx)?`<sup class="vnum">${marks.get(myIdx)}</sup>`:"";
@@ -35,10 +34,7 @@ function renderVerseHTML(text, stage, blanked, marks, smart){
   }).join("");
 }
 function pickBlankSet(text, fraction){
-  const toks = tokenize(text);
-  const wordIdxs = [];
-  let wIdx=0;
-  toks.forEach(t=>{ if(isWord(t)){ wordIdxs.push(wIdx); wIdx++; } });
+  const wordIdxs = tokenWords(text).map(t=>t.index);
   const n = Math.round(wordIdxs.length * fraction);
   const shuffled = wordIdxs.slice().sort(()=>Math.random()-0.5);
   return new Set(shuffled.slice(0,n));

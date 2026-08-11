@@ -9,7 +9,12 @@ let proveState = null;
 function chunkVerse(text){
   const clean = String(text||"").replace(/\s+/g," ").trim();
   if(!clean) return [];
-  const words = clean.split(" ");
+  /* Boundaries are chosen over WORD positions, but each chunk is cut out of
+     the source with spanByWords() rather than rebuilt by joining words. That
+     distinction matters: joining word tokens would silently delete every
+     free-standing em dash from the puzzle. Spans run start-of-word to
+     start-of-word, so consecutive chunks partition the text exactly. */
+  const words = tokenWords(clean);
   const N = words.length;
   // Scale piece count with verse length: short verses still get ~5
   // pieces (2-3 words each), long passages never exceed 20 pieces.
@@ -19,34 +24,34 @@ function chunkVerse(text){
   let start = 0;
   while(start < N){
     const remain = N - start;
-    if(remain <= size+1){ chunks.push(words.slice(start).join(" ")); break; }
+    if(remain <= size+1){ chunks.push(spanByWords(clean, start)); break; }
     // Prefer a natural punctuation break near the target size.
     let chosen = -1;
     const lo = start + Math.max(1, size-2);
     const hi = Math.min(start + size, N-1);
     for(let i=hi; i>=lo; i--){
-      if(/[,:;.!?]$/.test(words[i])){ chosen=i+1; break; }
+      if(/[,:;.!?]$/.test(words[i].raw)){ chosen=i+1; break; }
     }
     if(chosen < 0) chosen = start + size;
     // Do not leave a one-word final fragment.
     if(N-chosen>0 && N-chosen<2) chosen = N;
-    chunks.push(words.slice(start,chosen).join(" "));
+    chunks.push(spanByWords(clean, start, chosen));
     start = chosen;
   }
   // Guarantee the bounds: split the longest piece while under-count…
   const minPieces = Math.min(5, Math.floor(N/2));
   while(chunks.length < minPieces){
     let li = 0;
-    chunks.forEach((c,i)=>{ if(c.split(" ").length > chunks[li].split(" ").length) li = i; });
-    const w = chunks[li].split(" ");
-    if(w.length < 4) break;
-    const mid = Math.ceil(w.length/2);
-    chunks.splice(li, 1, w.slice(0,mid).join(" "), w.slice(mid).join(" "));
+    chunks.forEach((c,i)=>{ if(wordCount(c) > wordCount(chunks[li])) li = i; });
+    const n = wordCount(chunks[li]);
+    if(n < 4) break;
+    const mid = Math.ceil(n/2);
+    chunks.splice(li, 1, spanByWords(chunks[li], 0, mid), spanByWords(chunks[li], mid));
   }
   // …and merge the shortest neighbors while over-count.
   while(chunks.length > 20){
     let si = 0;
-    chunks.forEach((c,i)=>{ if(c.split(" ").length < chunks[si].split(" ").length) si = i; });
+    chunks.forEach((c,i)=>{ if(wordCount(c) < wordCount(chunks[si])) si = i; });
     const j = (si===0 || (si<chunks.length-1 && chunks[si+1].length < chunks[si-1].length)) ? si : si-1;
     chunks.splice(j, 2, chunks[j] + " " + chunks[j+1]);
   }

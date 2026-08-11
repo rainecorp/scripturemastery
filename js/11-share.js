@@ -61,7 +61,9 @@ function drawShareCanvas(v, done){
     done(c);
   };
   const wrapText = (ctx, text, cx2, cy, maxW, lh)=>{
-    const words = text.split(" ");
+    /* Display tokens, not word tokens: a free-standing dash has to survive
+       onto the share card even though it is not a word. */
+    const words = displayTokens(text).map(t=>t.raw);
     let line = "", lines = [];
     words.forEach(w=>{
       const t = line ? line+" "+w : w;

@@ -460,7 +460,10 @@ function renderArenaSession(){
       hintBtn.disabled = true; hintBtn.textContent = "💛 Heart used";
     };
   } else if(q.type==="fillBlank"){
-    const shown = q.words.map((w,i)=> i===q.blankIndex ? `<span class="blank-slot">&nbsp;</span>` : w).join(" ");
+    /* q.words is the display stream; the blank is keyed on WORD index, so
+       punctuation-only tokens can never be blanked out. */
+    const shown = q.words.map(t => t.isWord && t.index===q.blankIndex
+      ? `<span class="blank-slot">&nbsp;</span>` : t.raw).join(" ");
     shell(`
       <div class="tq-card"><div class="tq-kicker">Fill in the blank</div><div class="tq-lead">${shown}</div><div class="tq-theme" style="margin-top:6px;">${q.v.ref}</div></div>
       <div class="ta-opts">${q.options.map((o,i)=>`<button class="t-opt" data-i="${i}"><span class="to-text">${o}</span></button>`).join("")}</div>
@@ -492,7 +495,9 @@ function renderArenaSession(){
     };
   } else if(q.type==="findError"){
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Tap the word that doesn't belong</div><div class="fe-words">${q.words.map((w,i)=>`<span class="fe-word ${q.retryUsed && Number(q.firstMissIdx)===i ? "picked-wrong used" : ""}" data-i="${i}">${w}</span>`).join(" ")}</div><div class="tq-theme" style="margin-top:6px;">${q.v.ref}</div></div>
+      <div class="tq-card"><div class="tq-kicker">Tap the word that doesn't belong</div><div class="fe-words">${q.words.map(t => t.isWord
+        ? `<span class="fe-word ${q.retryUsed && Number(q.firstMissIdx)===t.index ? "picked-wrong used" : ""}" data-i="${t.index}">${t.raw}</span>`
+        : t.raw).join(" ")}</div><div class="tq-theme" style="margin-top:6px;">${q.v.ref}</div></div>
       ${q.retryUsed ? `<div class="fe-retry" id="feRetry">💛 Not that one — you get <strong>one more try</strong>. Look closer…</div>` : `<div class="fe-lives">❤️❤️ two tries</div>`}
     `);
     body.querySelectorAll(".fe-word").forEach(sp=>{

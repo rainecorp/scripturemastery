@@ -19,9 +19,11 @@ function trialPool(){
   return VERSES.filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
 }
 function trialSnippet(text, words){
-  const w = (text||"").trim().split(/\s+/);
   const n = words || 14;
-  return w.slice(0, n).join(" ") + (w.length > n ? " …" : "");
+  const total = wordCount(text);
+  /* spanByWords keeps the source punctuation between the words it spans, so a
+     snippet that straddles an em dash still shows it. */
+  return spanByWords(text, 0, n) + (total > n ? " …" : "");
 }
 
 const ARENA_DIFF = {
@@ -217,19 +219,23 @@ function arenaDistractors(v, count){
 }
 function pickRandomWord(){
   const v = VERSES[Math.floor(Math.random()*VERSES.length)];
-  const words = v.text.trim().split(/\s+/).filter(w=>w.replace(/[^a-zA-Z]/g,"").length>2);
-  const w = words[Math.floor(Math.random()*words.length)] || "thing";
-  return w.replace(/[.,;:!?"“”'’]/g,"");
+  /* t.core is already the word without its surrounding punctuation, which is
+     what the old trailing .replace() was approximating. */
+  const words = tokenWords(v.text).filter(t=>t.core.replace(/[^a-zA-Z]/g,"").length>2);
+  const t = words[Math.floor(Math.random()*words.length)];
+  return t ? t.core : "thing";
 }
-function scrambleLeadIn(words, start){
+/* `start` is a word position; the lead-in is cut from the source so its
+   punctuation survives. (The second branch below is unreachable — start<14
+   forces leadStart to 0 — but it is preserved as-is: T3 changes tokenizing,
+   not logic.) */
+function scrambleLeadIn(text, start){
   if(start <= 0) return "";
   let leadStart = Math.max(0, start - 14);
-  let lead = words.slice(leadStart, start);
-  if(lead.length < 6 && leadStart > 0){
+  if(start - leadStart < 6 && leadStart > 0){
     leadStart = Math.max(0, start - 20);
-    lead = words.slice(leadStart, start);
   }
-  return `${leadStart > 0 ? "… " : ""}${lead.join(" ")}`;
+  return `${leadStart > 0 ? "… " : ""}${spanByWords(text, leadStart, start)}`;
 }
 function buildArenaQuestion(v, type, diffCfg){
   const q = {v, type, ok:null, hinted:false};
@@ -238,27 +244,32 @@ function buildArenaQuestion(v, type, diffCfg){
     q.options = shuffleArr([v].concat(distract));
     if(type==="timedRecall") q.timeLimit = diffCfg.timer;
   } else if(type==="finishVerse"){
-    const words = v.text.trim().split(/\s+/);
-    const cut = Math.max(2, Math.floor(words.length*0.6));
-    const tailLen = Math.max(2, words.length-cut);
-    q.lead = words.slice(0,cut).join(" ");
-    const correctEnd = words.slice(cut).join(" ");
-    const distract = arenaDistractors(v, diffCfg.options-1).map(x=>{
-      const w2 = x.text.trim().split(/\s+/);
-      return w2.slice(Math.max(0, w2.length-tailLen)).join(" ");
-    });
+    const n = wordCount(v.text);
+    const cut = Math.max(2, Math.floor(n*0.6));
+    const tailLen = Math.max(2, n-cut);
+    q.lead = spanByWords(v.text, 0, cut);
+    const correctEnd = spanByWords(v.text, cut);
+    const distract = arenaDistractors(v, diffCfg.options-1).map(x=>
+      spanByWords(x.text, Math.max(0, wordCount(x.text)-tailLen))
+    );
     q.options = shuffleArr([correctEnd].concat(distract));
     q.correctEnd = correctEnd;
   } else if(type==="buildVerse"){
     q.chunks = chunkVerse(v.text);
     q.builtIndex = 0;
   } else if(type==="fillBlank"){
-    const words = v.text.trim().split(/\s+/);
-    const candidates = words.map((w,i)=>({w,i})).filter(o=> o.i>0 && o.i<words.length-1 && o.w.replace(/[^a-zA-Z]/g,"").length>2);
-    const pick = candidates[Math.floor(Math.random()*candidates.length)] || {w:words[0], i:0};
-    q.blankIndex = pick.i;
+    /* q.words is the DISPLAY stream (punctuation included, whitespace not) so
+       the sentence still reads correctly; q.blankIndex is a WORD position.
+       Keeping those two separate is the whole point of T3 — a lone em dash
+       occupies a display slot but not a word index. */
+    const words = displayTokens(v.text);
+    const last = wordCount(v.text) - 1;
+    const candidates = words.filter(t => t.isWord && t.index>0 && t.index<last &&
+                                         t.core.replace(/[^a-zA-Z]/g,"").length>2);
+    const pick = candidates[Math.floor(Math.random()*candidates.length)] || words.find(t=>t.isWord);
+    q.blankIndex = pick ? pick.index : 0;
     q.words = words;
-    const clean = pick.w.replace(/[.,;:!?"“”'’]/g,"");
+    const clean = pick ? pick.core : "";
     q.correctWord = clean;
     const distract = [];
     let guard = 0;
@@ -269,19 +280,23 @@ function buildArenaQuestion(v, type, diffCfg){
     }
     q.options = shuffleArr([clean].concat(distract));
   } else if(type==="findError"){
-    const words = v.text.trim().split(/\s+/);
-    const idx = words.length>2 ? 1+Math.floor(Math.random()*(words.length-2)) : 0;
-    q.words = words.slice();
+    /* Same split: display stream for reading, word index for the answer. Only
+       real words are tappable now — you can no longer be asked whether a
+       free-standing dash is the word that does not belong. */
+    const n = wordCount(v.text);
+    const idx = n>2 ? 1+Math.floor(Math.random()*(n-2)) : 0;
+    q.words = displayTokens(v.text).map(t => ({...t}));
     q.errorIndex = idx;
-    q.words[idx] = pickRandomWord();
+    const slot = q.words.find(t => t.isWord && t.index===idx);
+    if(slot) slot.raw = pickRandomWord();
     q.retryUsed = false;
   } else if(type==="wordScramble"){
-    const words = v.text.trim().split(/\s+/);
+    const words = tokenWords(v.text);
     const n = Math.min(8, words.length);
     const start = words.length > n ? Math.floor(Math.random()*(words.length-n+1)) : 0;
-    q.scrTarget = words.slice(start, start+n);
+    q.scrTarget = words.slice(start, start+n).map(t=>t.raw);
     q.scrStart = start;
-    q.scrLead = scrambleLeadIn(words, start);
+    q.scrLead = scrambleLeadIn(v.text, start);
     q.scrPool = shuffleArr(q.scrTarget.map((w,k)=>({w, k})));
     q.scrNext = 0;
     q.scrMiss = 0;

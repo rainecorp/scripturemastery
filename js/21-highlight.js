@@ -107,13 +107,17 @@ const HL_PHRASES = [
   ["mighty winds","warning",82],
   ["shafts in the whirlwind","warning",84],
   ["hail and mighty storm","warning",84]
-].map(([phrase,role,priority])=>({raw:phrase, words:phrase.split(" "), role, priority})).sort((a,b)=>b.words.length-a.words.length || b.priority-a.priority);
+].map(([phrase,role,priority])=>({raw:phrase, words:tokenWords(phrase).map(t=>t.raw), role, priority})).sort((a,b)=>b.words.length-a.words.length || b.priority-a.priority);
 
 function classifyVerse(text){
-  const toks=tokenize(text);
-  const words=[];
-  let wIdx=0;
-  toks.forEach(tok=>{ if(isWord(tok)){ words.push({idx:wIdx,clean:tok.toLowerCase().replace(/[^a-z']/g,""),root:lexicalRoot(tok)}); wIdx++; } });
+  /* `clean` and `root` are derived from the raw token exactly as before —
+     T3 only changes where word POSITION comes from, not how the highlighter
+     decides what a word means. */
+  const words = tokenWords(text).map(t=>({
+    idx:  t.index,
+    clean: t.raw.toLowerCase().replace(/[^a-z']/g,""),
+    root:  lexicalRoot(t.raw)
+  }));
 
   const candidates=[];
   words.forEach(w=>{

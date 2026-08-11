@@ -51,7 +51,9 @@ const TIER_TRIMS = [
   {trim:"#f4b942", glow:"rgba(244,185,66,.55)", metal:"Gold"},
   {trim:"#2fd4c0", glow:"rgba(47,212,192,.6)", metal:"Teal Gold"}
 ];
-function wordCount(text){ return (text||"").trim().split(/\s+/).filter(Boolean).length; }
+/* wordCount() used to be defined here as trim().split(/\s+/), which counted a
+   free-standing em dash as a word and so disagreed with the study screen on 7
+   passages. It is now the canonical one in js/00-tokenize.js. */
 function difficultyIndexForText(text){
   const words = wordCount(text);
   if(words <= 25) return 0;
@@ -83,7 +85,6 @@ SQ.isPopularVerse = isPopularVerse;
 SQ.DIFFICULTIES = DIFFICULTIES;
 SQ.STAGES = STAGES;
 SQ.TIER_TRIMS = TIER_TRIMS;
-SQ.wordCount = wordCount;
 SQ.difficultyIndexForText = difficultyIndexForText;
 SQ.difficultyForVerse = difficultyForVerse;
 SQ.difficultyLabelForVerse = difficultyLabelForVerse;
