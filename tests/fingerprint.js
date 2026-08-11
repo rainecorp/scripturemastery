@@ -40,6 +40,16 @@
   const realRandom = Math.random;
   Math.random = function(){ seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
 
+  // Freeze measured storage. T4 put a live "Storage used: N KB" line at the
+  // foot of Today, and N depends on whatever else is in localStorage at the
+  // moment of capture — including this harness's own baseline blobs. Left
+  // alone it changes the Today hash for reasons that have nothing to do with
+  // the code under test, and worse, it often changes it WITHOUT changing the
+  // length, which is exactly the kind of drift that looks like a real
+  // regression. Same treatment as Math.random: pin it, restore it after.
+  const realStorageUsed = window.storageUsedBytes;
+  if(typeof realStorageUsed === "function") window.storageUsedBytes = function(){ return 123456; };
+
   const out = {};
   const APP = document.getElementById("app");
   const grab = (el) => el ? h(el.innerHTML) + ":" + el.innerHTML.length : "ABSENT";
@@ -189,6 +199,7 @@
   },0));
 
   Math.random = realRandom;
+  if(typeof realStorageUsed === "function") window.storageUsedBytes = realStorageUsed;
   view.tab = "today"; view.volume = null; view.trialRound = null;
   return JSON.stringify(out, Object.keys(out).sort(), 1);
 })();

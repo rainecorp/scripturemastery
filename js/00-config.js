@@ -116,6 +116,14 @@ const QUEST_ROUND_LEN = {fullRecitation:3, buildVerse:4, wordScramble:5, pairMat
 const BLITZ_TYPES = ["text2ref","ref2text","theme2ref","fillBlank","finishVerse"];
 const BLITZ_SECONDS = 60;
 
+/* ---- Text verification (T4) ----
+   Whether the Study screen tells the reader that a passage's source has not
+   been checked. Every seed passage is unverified today, so this shows on all
+   of them; that is the honest state and it is meant to be uncomfortable
+   until data/text-sources.js is filled in. One flag to silence it, but
+   silencing it does not make the text correct. ---- */
+const SHOW_TEXT_VERIFICATION = true;
+
 /* ---- External surfaces ---- */
 const DAILY_QUEST_URL = "/daily/"; // Daily Quest lives at myrateplace.com/daily
 const BRIDGE_KEY = "lul_bridge_events";
@@ -139,5 +147,6 @@ SQ.ARENA_QUEST_POOL = ARENA_QUEST_POOL;
 SQ.QUEST_ROUND_LEN = QUEST_ROUND_LEN;
 SQ.BLITZ_TYPES = BLITZ_TYPES;
 SQ.BLITZ_SECONDS = BLITZ_SECONDS;
+SQ.SHOW_TEXT_VERIFICATION = SHOW_TEXT_VERIFICATION;
 SQ.DAILY_QUEST_URL = DAILY_QUEST_URL;
 SQ.BRIDGE_KEY = BRIDGE_KEY;

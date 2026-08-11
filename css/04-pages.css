@@ -231,3 +231,27 @@
   .storage-card .storage-bar i.over{background:linear-gradient(90deg,#f87171,var(--red));}
   .storage-card.warn{border-color:rgba(244,185,66,.55); box-shadow:0 0 0 1px rgba(244,185,66,.25), var(--shadow);}
   .storage-card.bad{border-color:rgba(220,38,38,.55); box-shadow:0 0 0 1px rgba(220,38,38,.28), var(--shadow);}
+
+  /* ---- text verification note (T4) ----
+     Quiet for "unverified" (currently every passage — a caveat, not an
+     error). Loud for "drifted", which means a passage was edited after
+     someone reviewed it and nobody has re-checked it since. */
+  .verify-note{
+    margin:-4px 0 14px; padding:7px 11px;
+    border-radius:12px;
+    background:rgba(11,45,66,.045);
+    border:1px dashed rgba(11,45,66,.18);
+    font-size:11px; font-weight:750; line-height:1.45;
+    color:var(--muted); text-align:left;
+  }
+  .verify-note.ok{
+    background:var(--green-bg); border:1px solid rgba(22,163,74,.28);
+    color:#15803d;
+  }
+  .verify-note.drift{
+    display:block;
+    background:var(--red-bg); border:1px solid rgba(220,38,38,.35);
+    color:#991b1b; font-size:12px;
+  }
+  .verify-note.drift strong{display:block; margin-bottom:3px; font-weight:900;}
+  .verify-note.drift span{font-weight:700;}
