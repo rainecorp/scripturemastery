@@ -66,7 +66,158 @@ function loadState(){
   }catch(e){}
   return {xp:0, streak:0, lastDay:null, progress:{}, edits:{}};
 }
-function persistState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+/* =========================================================
+   STORAGE GUARD (T4)
+   ---------------------------------------------------------
+   localStorage is a hard per-origin cap (~5 MB in every browser that
+   matters) and this app SHARES that origin with Daily Quest. Before this
+   guard, persistState() was one bare setItem: when the quota ran out the
+   write threw, the throw escaped into whatever called saveState(), and
+   every later save failed too — while the app kept rendering as though
+   progress had been written. The player would seal verses all evening and
+   lose the lot on reload, with nothing on screen ever saying so.
+
+   Three rules, in priority order:
+     1. Progress is never shed. Not as a first resort, not as a last one.
+     2. Under quota pressure, drop non-progress data one rung at a time and
+        retry the write after each rung, so we give up the least we can.
+     3. Every failure is visible. Silence is the actual bug being fixed
+        here — a save that fails loudly costs a player one evening, a save
+        that fails quietly costs them their trust.
+   ========================================================= */
+
+/* Conservative: browsers report ~5 MB, but the cap counts UTF-16 code
+   units and some count keys too, so treat 4 MB as "full" and start
+   warning well before the write actually fails. */
+const STORAGE_BUDGET = 4 * 1024 * 1024;
+const STORAGE_WARN_AT = 0.8;
+
+/* Non-null whenever the most recent write did NOT land. Read by the
+   storage line on Today so the UI can never claim a save that didn't
+   happen. Cleared on the next successful write. */
+let storageLastError = null;
+let storageWarnAt = 0;
+
+function isQuotaError(e){
+  if(!e) return false;
+  return e.name === "QuotaExceededError"
+      || e.name === "NS_ERROR_DOM_QUOTA_REACHED"   // Firefox
+      || e.code === 22 || e.code === 1014;
+}
+
+/* Sheddable data, in the order it gets given up. Each rung returns true
+   only if it actually freed something, so the ladder stops at the first
+   rung that helps and we can tell the player exactly what was dropped.
+   NOTHING IN THIS LIST IS PROGRESS. When T13 adds the learning-event log,
+   it goes here — at the top, above the calendar. */
+const STORAGE_SHED_LADDER = [
+  {
+    name: "the Daily Quest event queue",
+    shed(){
+      try{
+        const q = JSON.parse(localStorage.getItem(BRIDGE_KEY) || "[]");
+        if(!Array.isArray(q) || q.length <= 20) return false;
+        localStorage.setItem(BRIDGE_KEY, JSON.stringify(q.slice(-20)));
+        return true;
+      }catch(e){ return false; }
+    }
+  },
+  {
+    name: "check-in history older than a year",
+    shed(){
+      const cal = state && state.calendar;
+      if(!cal) return false;
+      /* ISO dates sort lexicographically, so a string compare is a date
+         compare. Streak and bestStreak are counters, not derived from
+         this map, so trimming it cannot cost a streak. */
+      const cut = new Date(Date.now() - 400*DAY).toISOString().slice(0,10);
+      let n = 0;
+      Object.keys(cal).forEach(iso=>{ if(iso < cut){ delete cal[iso]; n++; } });
+      return n > 0;
+    }
+  }
+];
+
+function warnStorage(title, detail){
+  try{ console.warn("[storage] " + title + " — " + detail.replace(/<[^>]+>/g, "")); }catch(e){}
+  /* Throttle the toast, never the record. A player who is out of room
+     should be told, not nagged every keystroke. */
+  const now = Date.now();
+  if(now - storageWarnAt < 60000) return;
+  storageWarnAt = now;
+  try{
+    showToast(`⚠️ <strong>${title}</strong><br><span style="font-size:11.5px;color:#9db4d6;">${detail}</span>`, true);
+  }catch(e){}
+}
+
+function writeStateRaw(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+/* Returns true if the save landed. Callers may ignore it — the visible
+   warning and storageLastError are the primary channel — but sealing
+   code can check it when it wants to be sure. */
+function persistState(){
+  try{
+    writeStateRaw();
+    storageLastError = null;
+    return true;
+  }catch(e){
+    if(!isQuotaError(e)){
+      /* Private browsing, a disabled-storage policy, a corrupt profile.
+         Nothing to shed our way out of. */
+      storageLastError = {kind:"write", at:Date.now(), message:String((e && e.message) || e)};
+      warnStorage("Progress could not be saved",
+        "This browser refused the write. Your climb is safe on screen but may not survive a reload.");
+      return false;
+    }
+  }
+
+  const dropped = [];
+  for(let i = 0; i < STORAGE_SHED_LADDER.length; i++){
+    let freed = false;
+    try{ freed = STORAGE_SHED_LADDER[i].shed(); }catch(e){}
+    if(!freed) continue;
+    dropped.push(STORAGE_SHED_LADDER[i].name);
+    try{
+      writeStateRaw();
+      storageLastError = null;
+      warnStorage("Storage was full — room was made",
+        `Cleared ${dropped.join(" and ")}. <strong>No memorized verse, seal, or streak was touched.</strong>`);
+      return true;
+    }catch(e2){
+      if(!isQuotaError(e2)) break;   // a different failure; shedding won't help
+    }
+  }
+
+  storageLastError = {kind:"quota", at:Date.now(), dropped, message:"localStorage is full"};
+  warnStorage("Storage is full — progress is NOT being saved",
+    "This browser is out of room and there is nothing left to clear but your progress, which we will not touch. Free up space in your browser before you reload.");
+  return false;
+}
+
+/* Bytes, as the quota counts them: UTF-16 code units, keys included. */
+function storageUsedBytes(){
+  try{
+    let units = 0;
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      units += k.length + (localStorage.getItem(k) || "").length;
+    }
+    return units * 2;
+  }catch(e){ return null; }
+}
+function storageReport(){
+  const used = storageUsedBytes();
+  let mine = null;
+  try{ mine = (STORE_KEY.length + (localStorage.getItem(STORE_KEY) || "").length) * 2; }catch(e){}
+  return {
+    used, mine,
+    budget: STORAGE_BUDGET,
+    pct: used == null ? null : used / STORAGE_BUDGET,
+    tight: used != null && used >= STORAGE_BUDGET * STORAGE_WARN_AT,
+    lastError: storageLastError
+  };
+}
+
 function saveState(){
   persistState();
   if(window.__achvReady) checkAchievements();
@@ -201,6 +352,12 @@ SQ.HAD_SAVE_AT_BOOT = HAD_SAVE_AT_BOOT;
 SQ.loadState = loadState;
 SQ.persistState = persistState;
 SQ.saveState = saveState;
+SQ.STORAGE_BUDGET = STORAGE_BUDGET;
+SQ.isQuotaError = isQuotaError;
+SQ.warnStorage = warnStorage;
+SQ.storageUsedBytes = storageUsedBytes;
+SQ.storageReport = storageReport;
+Object.defineProperty(SQ,"storageLastError",{get:()=>storageLastError,set:v=>{storageLastError=v;},enumerable:true,configurable:true});
 Object.defineProperty(SQ,"state",{get:()=>state,set:v=>{state=v;},enumerable:true,configurable:true});
 SQ.versesInVolumeEarly = versesInVolumeEarly;
 SQ.climbLog = climbLog;

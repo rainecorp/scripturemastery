@@ -211,3 +211,23 @@
   .trr-item{display:flex; align-items:center; gap:10px; padding:5px 0; font-weight:800; font-size:13px;}
   .tr-btns{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
   .tr-btns .btn{max-width:220px;}
+
+  /* ---- storage line (T4) ----
+     Lives at the foot of Today until a Settings screen exists. The plain
+     line is deliberately forgettable; the two card states are not. */
+  .storage-line{
+    margin:2px 0 18px; padding:0 6px;
+    font-size:11px; font-weight:700; letter-spacing:.02em;
+    color:rgba(255,255,255,.42); text-align:center;
+  }
+  .storage-card .storage-detail{font-size:12.5px; font-weight:700; line-height:1.5; color:var(--ink);}
+  .storage-card .storage-sub{margin-top:6px; font-size:11px; font-weight:700; color:var(--muted);}
+  .storage-card .storage-bar{
+    margin-top:10px; height:7px; border-radius:99px; overflow:hidden;
+    background:rgba(11,45,66,.10);
+  }
+  .storage-card .storage-bar i{display:block; height:100%; border-radius:99px;}
+  .storage-card .storage-bar i.warn{background:linear-gradient(90deg,var(--gold),var(--gold-2));}
+  .storage-card .storage-bar i.over{background:linear-gradient(90deg,#f87171,var(--red));}
+  .storage-card.warn{border-color:rgba(244,185,66,.55); box-shadow:0 0 0 1px rgba(244,185,66,.25), var(--shadow);}
+  .storage-card.bad{border-color:rgba(220,38,38,.55); box-shadow:0 0 0 1px rgba(220,38,38,.28), var(--shadow);}
