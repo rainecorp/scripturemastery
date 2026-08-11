@@ -1,0 +1,45 @@
+{
+  "id": "jerusalem-temple-tower",
+  "name": "Jerusalem Temple Tower",
+  "version": 1,
+  "canvasWidth": 640,
+  "floors": 25,
+  "repeatLevels": 22,
+  "pieces": {
+    "roof": {
+      "file": "jerusalem-temple-tower-roof-final-25.png",
+      "width": 640,
+      "height": 251,
+      "glowTop": 163
+    },
+    "top": {
+      "file": "jerusalem-temple-tower-top-window-24.png",
+      "width": 640,
+      "height": 87,
+      "glowTop": 32
+    },
+    "repeat": {
+      "file": "jerusalem-temple-tower-window-repeat.png",
+      "width": 640,
+      "height": 94,
+      "glowTop": 31,
+      "instances": 22
+    },
+    "first": {
+      "file": "jerusalem-temple-tower-window-01.png",
+      "width": 640,
+      "height": 94,
+      "glowTop": 36
+    },
+    "bottom": {
+      "file": "jerusalem-temple-tower-bottom.png",
+      "width": 640,
+      "height": 302,
+      "displayWidth": 585
+    }
+  },
+  "colors": {
+    "hue": "#d4a017",
+    "soft": "rgba(212,160,23,.20)"
+  }
+}

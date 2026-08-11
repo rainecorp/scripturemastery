@@ -1,0 +1,45 @@
+{
+  "id": "ancient-america-temple",
+  "name": "Ancient America Temple Tower",
+  "version": 1,
+  "canvasWidth": 640,
+  "floors": 25,
+  "repeatLevels": 22,
+  "pieces": {
+    "roof": {
+      "file": "ancient-america-temple-roof-final-25.png",
+      "width": 640,
+      "height": 251,
+      "glowTop": 163
+    },
+    "top": {
+      "file": "ancient-america-temple-top-window-24.png",
+      "width": 640,
+      "height": 87,
+      "glowTop": 32
+    },
+    "repeat": {
+      "file": "ancient-america-temple-window-repeat.png",
+      "width": 640,
+      "height": 94,
+      "glowTop": 31,
+      "instances": 22
+    },
+    "first": {
+      "file": "ancient-america-temple-window-01.png",
+      "width": 640,
+      "height": 94,
+      "glowTop": 36
+    },
+    "bottom": {
+      "file": "ancient-america-temple-bottom.png",
+      "width": 640,
+      "height": 302,
+      "displayWidth": 585
+    }
+  },
+  "colors": {
+    "hue": "#14b8a6",
+    "soft": "rgba(20,184,166,.20)"
+  }
+}

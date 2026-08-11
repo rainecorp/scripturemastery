@@ -1,0 +1,20 @@
+# --- Archives and backups -------------------------------------------------
+# Snapshot zips are superseded by git history. Kept on disk under _archive/
+# but never committed: they bloat the repo permanently and can't be diffed.
+*.zip
+_archive/
+
+# --- macOS ----------------------------------------------------------------
+.DS_Store
+__MACOSX/
+.Spotlight-V100
+.Trashes
+
+# --- Local tooling --------------------------------------------------------
+# Per-machine permission grants; not shared.
+.claude/settings.local.json
+
+# --- Node (test harness, T2 onward) ---------------------------------------
+node_modules/
+npm-debug.log*
+coverage/
