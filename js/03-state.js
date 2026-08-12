@@ -60,11 +60,177 @@ const STORE_KEY = CLIMBER ? "lineUponLine_v1::" + CLIMBER : "lineUponLine_v1";
 const HAD_SAVE_AT_BOOT = !!localStorage.getItem("lineUponLine_v1");
 
 function loadState(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return {xp:0, streak:0, lastDay:null, progress:{}, edits:{}};
+  let raw = null;
+  try{ raw = localStorage.getItem(STORE_KEY); }catch(e){}
+  if(raw){
+    try{
+      return JSON.parse(raw);
+    }catch(e){
+      /* Corrupt, not missing — there is a real difference. A missing key
+         means "new climber," nothing to protect. A key that FAILS to
+         parse means real progress is sitting right there, one bad byte
+         from being readable, and about to be silently overwritten the
+         moment this session calls persistState() with a blank state.
+         Copy the raw bytes out under a timestamped key first, so they
+         survive that overwrite even though nothing reads them back
+         automatically yet — that's a recovery UI for a later ticket,
+         this one only has to stop losing the data. */
+      try{
+        const recoveryKey = STORE_KEY + "::recovery::" + Date.now();
+        localStorage.setItem(recoveryKey, raw);
+        console.warn("[state] could not parse saved progress; preserved the raw bytes under " + recoveryKey);
+      }catch(e2){ /* storage itself is the problem; nothing more we can do here */ }
+    }
+  }
+  return {xp:0, streak:0, lastDay:null, progress:{}};
+}
+
+/* =========================================================
+   SCHEMA VERSION + MIGRATION RUNNER (T8)
+   ---------------------------------------------------------
+   Build mode: there is no real save data to migrate FROM yet, so this
+   does not carry the app's whole history forward step by step — it
+   establishes the discipline for the next real schema change, whenever
+   that is, so it lands as one small, sequential, idempotent function
+   instead of another ad-hoc `if(state.x == null)` scattered wherever
+   the change happened to be made.
+
+   Rules a migration must follow:
+     - Only ever ADD, rename, or explicitly retire a field this specific
+       version knows about. Never strip a field it doesn't recognize —
+       an export from a newer build, or a field a future version added,
+       must survive an older migration untouched.
+     - Idempotent: `run()` must be safe to call on state that has
+       already been migrated. The runner enforces this by version
+       number, but a migration should not rely on that alone — check
+       before you touch, the same discipline `def()` already uses below.
+   ========================================================= */
+const SCHEMA_VERSION = 1;
+const MIGRATIONS = [
+  {
+    to: 1,
+    describe: "drop state.edits — read at the old per-verse-edit site, never written since the editing UI was removed",
+    run(s){ if("edits" in s) delete s.edits; }
+  }
+];
+/* Applies every migration between state's current version and
+   SCHEMA_VERSION, in order, then stamps the version. A state already at
+   SCHEMA_VERSION runs zero migrations — the loop condition is what makes
+   the whole thing idempotent, not any care taken by individual `run()`
+   bodies. */
+/* `migrations` defaults to the real, shipped list — every production
+   caller gets that. The parameter exists so a test can hand the SAME
+   function a synthetic multi-step list and prove the sequencing and
+   resume-from-current-version behavior against the real runner, not a
+   reimplementation of it. (MIGRATIONS is a `const` at module scope, so
+   unlike `state` it never becomes a `window` property to swap out from
+   the console — this is the honest way to make it swappable for a
+   test without changing what every real caller gets.) */
+function runMigrations(s, migrations){
+  migrations = migrations || MIGRATIONS;
+  let from = s.schemaVersion || 0;
+  let to = from;
+  migrations.forEach(m=>{
+    if(from < m.to){ m.run(s); to = m.to; }
+  });
+  s.schemaVersion = migrations === MIGRATIONS ? SCHEMA_VERSION : to;
+  return s;
+}
+
+/* =========================================================
+   EXPORT / IMPORT (T8)
+   ---------------------------------------------------------
+   Pure data functions — no DOM, no download link, no confirm dialog.
+   That UI (Settings doesn't exist yet — see ROADMAP.md T4a) can call
+   these three; this ticket only has to make the round trip itself
+   correct: what you export is exactly what comes back, nothing
+   silently dropped or coerced, and nothing gets APPLIED to real state
+   without the caller first looking at previewProgressImport()'s
+   summary and choosing to go ahead.
+
+   Three functions, three jobs:
+     exportProgress()         state -> a portable JSON string
+     previewProgressImport(j) that string -> {ok, summary} or {ok:false,
+                               error} — never touches live state
+     applyProgressImport(d)   the validated data from a preview ->
+                               actually replaces state and saves
+   ========================================================= */
+const EXPORT_FORMAT = 1;
+
+function exportProgress(){
+  return JSON.stringify({
+    exportFormat: EXPORT_FORMAT,
+    exportedAt: new Date().toISOString(),
+    climber: CLIMBER || null,
+    state: state
+  }, null, 2);
+}
+
+/* Accepts either the wrapped shape exportProgress() produces, or a bare
+   state object (someone pasting just the `state` blob) — both are
+   "a Line Upon Line save" as far as a human handing this file to
+   another device is concerned. */
+function previewProgressImport(json){
+  let parsed;
+  try{ parsed = JSON.parse(json); }
+  catch(e){ return { ok:false, error:"That doesn't look like a valid export file — it isn't readable JSON." }; }
+
+  if(!parsed || typeof parsed !== "object"){
+    return { ok:false, error:"That file doesn't contain a progress export." };
+  }
+  let incoming;
+  if(parsed.state && typeof parsed.state === "object"){
+    if(parsed.exportFormat !== EXPORT_FORMAT){
+      return { ok:false, error:`This export is format ${JSON.stringify(parsed.exportFormat)}, and this build only reads format ${EXPORT_FORMAT}.` };
+    }
+    incoming = parsed.state;
+  } else if(parsed.progress && typeof parsed.progress === "object"){
+    incoming = parsed;   // a bare state object
+  } else {
+    return { ok:false, error:"That file doesn't contain a progress export." };
+  }
+  if(typeof incoming.progress !== "object" || incoming.progress === null || Array.isArray(incoming.progress)){
+    return { ok:false, error:"The progress data in that file is malformed." };
+  }
+  if(!Number.isFinite(incoming.xp) || incoming.xp < 0){
+    return { ok:false, error:"The XP total in that file is invalid." };
+  }
+
+  const ids = Object.keys(incoming.progress);
+  const sealedIds = ids.filter(id => incoming.progress[id] && incoming.progress[id].sealed);
+  const sealedRefs = sealedIds
+    .map(id => { const v = VERSES.find(x=>x.id===id); return v ? v.ref : null; })
+    .filter(Boolean);
+
+  const summary = {
+    exportedAt: parsed.exportedAt || null,
+    climber: parsed.climber || null,
+    incoming: {
+      xp: incoming.xp,
+      streak: incoming.streak || 0,
+      sealedCount: sealedIds.length,
+      sealedRefs: sealedRefs.slice(0, 5),
+      sealedRefsMore: Math.max(0, sealedRefs.length - 5)
+    },
+    current: {
+      xp: state.xp,
+      streak: state.streak || 0,
+      sealedCount: Object.values(state.progress).filter(p=>p.sealed).length
+    }
+  };
+  return { ok:true, summary, data: incoming };
+}
+
+/* Only ever called with `data` from a previewProgressImport() that
+   returned ok:true — this function trusts its argument, it does not
+   re-validate. Runs the SAME migration runner an import from an older
+   build's export would need, so the imported data lands on today's
+   schema exactly like a normal load would. */
+function applyProgressImport(data){
+  runMigrations(data);
+  state = data;
+  persistState();
+  return true;
 }
 /* =========================================================
    STORAGE GUARD (T4)
@@ -269,6 +435,7 @@ function claimReward(key){
 }
 
 let state = loadState();
+runMigrations(state);
 /* v2 migrations: habit calendar, streak shields, achievements, sharing, sound */
 (function migrateV2(){
   let ch = false;
@@ -288,7 +455,6 @@ let state = loadState();
   if(ch) persistState();
 })();
 VERSES.forEach(v=>{
-  if(v.id in (state.edits||{})) v.text = state.edits[v.id];
   if(!state.progress[v.id]) state.progress[v.id] = {stage:0, sealed:false};
 });
 /* migrate old sealed verses into the review system */
@@ -419,3 +585,8 @@ SQ.touchStreak = touchStreak;
 SQ.ensureDailyRewards = ensureDailyRewards;
 SQ.isRewardClaimed = isRewardClaimed;
 SQ.claimReward = claimReward;
+SQ.SCHEMA_VERSION = SCHEMA_VERSION;
+SQ.runMigrations = runMigrations;
+SQ.exportProgress = exportProgress;
+SQ.previewProgressImport = previewProgressImport;
+SQ.applyProgressImport = applyProgressImport;
