@@ -22,7 +22,7 @@ Three rules that override everything else:
 2. **No framework, no build step, no npm dependency in the shipped app.** Test tooling may use Node; the app may not.
 3. **Never edit `scripture-tower 2/`.** Byte-identical today, will drift. `scripture-tower/` is the only source. Archive it in T1.
 
-After every ticket: update `CHANGES.md` with *Changed / Why / State migration / Verification*, commit, and export a dated zip.
+After every ticket: append a `✅ DONE` / *Shipped* note directly under that ticket's own entry in §8, covering what changed, why, and exactly how it was verified (specific commands run, specific assertions checked live in the browser), then commit with a long descriptive message. **This superseded the original plan of updating `CHANGES.md` and exporting a dated zip after each ticket** — once T1 put the project under real git version control, git history became the actual audit trail, and `CHANGES.md`/dated zips were an artifact of a pre-git workflow. `CHANGES.md` has been stale since T1 and should not be treated as current; do not resume updating it unless the project moves off git. See `HANDOFF.md` for the full picture of what "current" means in this repo.
 
 ---
 
@@ -773,17 +773,17 @@ More generic multiple-choice Arena modes · a second currency · public child pr
 
 ## 15 · Working agreement for the implementing agent
 
-1. Read this file, `ROADMAP_REVIEW.md`, `HANDOFF.md`, and `CHANGES.md` before touching code.
+1. Read `HANDOFF.md` first — it's the current entry point and says what's actually true today. Read this file's §8 ticket list for the plan and the `✅ DONE` notes for what's already shipped. `ROADMAP_REVIEW.md` and `IMPLEMENTATION_ROADMAP.md` are superseded drafts, worth reading only for the reasoning behind decisions already made — never implement from them directly (see the header at the top of this file). `CHANGES.md` is stale since T1; ignore it.
 2. Confirm you're in `scripture-tower/`, not the archive.
 3. Write pure logic and its tests before binding it to rendered controls.
 4. Reuse the existing `state`, `view`, render, SFX, FX, toast, and card conventions. Match the surrounding code's naming and comment density.
 5. Stay inside the ticket. Do not opportunistically redesign an unrelated screen.
 6. Test against a clean localStorage and a mid-progress fixture.
 7. Verify in a browser at desktop and mobile widths before declaring done.
-8. Update `CHANGES.md`: *Changed / Why / State migration / Verification*.
-9. Commit, then export a dated zip.
+8. Append a `✅ DONE` / *Shipped* note under the ticket's own entry in §8 — see §0 for exactly what that note should cover.
+9. Commit with a long, descriptive message (see recent `git log` for the established style: what was broken, why, what changed, and the specific verification performed). Push when asked to.
 
-Every handoff report states: files changed · state fields added · user-visible behavior · exact tests run and their results · known limitations · the dated export path.
+Every handoff report states: files changed · state fields added · user-visible behavior · exact tests run and their results · known limitations.
 
 **If something here turns out to be wrong once you're in the code, say so in the handoff report rather than silently working around it.** Every verified finding in `ROADMAP_REVIEW.md` was discovered exactly that way.
 
