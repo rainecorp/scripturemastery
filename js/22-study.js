@@ -182,31 +182,12 @@ function renderStudy(){
         SFX.tap();
       }
     } else if(!p.sealed){
-      sealVerse(p);
-      const floorN = recordClimb(v);
-      emitBridge("seal", v, 25);
-      state.xp += 50;
-      const heartGain = refillArenaHearts(1);
-      touchStreak();
-      saveState();
-      if(heartGain) setTimeout(()=> showToast(`💛 Arena heart restored by sealing ${v.ref}.`, true), 2600);
-      playSealCeremony(v, floorN);
+      /* T6: sealVerse() is no longer reachable from a bare button tap.
+         This opens the Recall Check; sealVerse() only fires from there,
+         and only on a passing grade. See js/26-recall-check.js. */
+      openRecallCheck(v, "first");
     } else if(due){
-      const res = resealVerse(p);
-      emitBridge(res.eternal ? "eternal" : "reseal", v, res.eternal ? 40 : 10);
-      state.xp += res.xp;
-      const heartGain = refillArenaHearts(1);
-      touchStreak();
-      saveState();
-      view.reviewMode = false;
-      render();
-      if(res.eternal){
-        SFX.fanfare(); FX.rain({count:120});
-        showToast(`♾️ <strong>ETERNAL SEAL</strong> · ${v.ref}<br><span style="color:#9db4d6;font-size:11.5px;">${r.name} will never fade again. +${res.xp} XP${heartGain ? " · 💛 +1" : ""}</span>`, true);
-      } else {
-        SFX.seal(); FX.rain({count:50});
-        showToast(`✦ Re-sealed! Ladder rung ${res.lvl}/${REVIEW_LADDER.length}. +${res.xp} XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}`);
-      }
+      openRecallCheck(v, "reseal");
     } else {
       state.xp += 5;
       const heartGain = refillArenaHearts(1);

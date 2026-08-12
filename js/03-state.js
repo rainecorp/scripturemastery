@@ -235,6 +235,7 @@ let state = loadState();
   def("shares", 0);
   def("resealsTotal", 0);
   def("sound", true);
+  def("strictMode", false);   // T6: Recall Check QWERTY-adjacent slips. Off = forgiving.
   if(state.lastDay === todayStr()){
     const iso = localISODate();
     if(!state.calendar[iso]){ state.calendar[iso] = {a:1}; ch = true; }

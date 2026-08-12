@@ -424,11 +424,20 @@ function settleAnswer(T, q, correct, opts){
     T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="type" && def.type===q.type, 1));
     T.newQuestBadges = T.newQuestBadges.concat(setArenaQuestProgress(a, def=>def.track==="streak", T.combo));
     const p = state.progress[q.v.id];
-    if(isDue(p)){
+    /* T6: Full Recitation is the self-report evidence type from
+       ROADMAP.md §2.3's evidence table — "hard max, no peek". Peeking
+       (q.hinted, set by the same spendArenaHeart() the hint button calls)
+       makes this round worth Arena points but not re-seal evidence: you
+       looked at the words, so it can no longer stand in for having
+       recalled them. First-seal-via-self-report is already impossible
+       here since isDue() requires p.sealed. */
+    if(isDue(p) && !(q.type==="fullRecitation" && q.hinted)){
       const res = resealVerse(p);
       T.score += res.xp;
       T.resealed.push(q.v);
       emitBridge(res.eternal ? "eternal" : "reseal", q.v, res.xp);
+    } else if(isDue(p) && q.type==="fullRecitation" && q.hinted){
+      setTimeout(()=> showToast(`👀 <strong>Peeked, so it didn't count toward re-sealing.</strong><br><span style="font-size:11.5px;color:#9db4d6;">Still earned Arena points for ${q.v.ref}. Recite it without looking to refresh the seal.</span>`, true), 250);
     }
     if(q.type==="fullRecitation" && !q.hinted && p.sealed){
       const T2 = view.trialRound;
