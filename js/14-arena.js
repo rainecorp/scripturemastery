@@ -293,6 +293,11 @@ function makeArenaRound(mode){
   return {
     mode, diffCfg, qs, i:0, correct:0, combo:0, bestCombo:0, score:0,
     hintsUsed:0, noHintCorrect:0, heartBonus:null, resealed:[], booksTouched:new Set(),
+    /* T7: an explicit identity + reward flag for this one round, so
+       finishArenaSession() can refuse to pay out twice for the same
+       session even if it were ever called twice -- belt and suspenders
+       alongside the `done` guard both its call sites already check. */
+    sessionId: "arena_"+Date.now()+"_"+Math.random().toString(36).slice(2,8), rewarded:false,
     done:false, locked:false, newlyUnlocked:[], newQuestBadges:[], timeLeft:null, timerHandle:null,
     blitzEnd:null, blitzTimer:null
   };
@@ -331,6 +336,13 @@ function unlockArenaAchievement(T, id){
   T.newlyUnlocked.push(id);
 }
 function finishArenaSession(T){
+  /* T7: idempotency guard. Both call sites already check T.done before
+     calling this, but that flag has other jobs (blocking further
+     answers, driving the results screen) -- T.rewarded exists only to
+     answer "has this exact session already been paid," and answering
+     it here means a future call site forgetting the T.done check still
+     can't double-pay. */
+  if(T.rewarded) return;
   const a = ensureArena();
   if(T.blitzTimer){ clearInterval(T.blitzTimer); T.blitzTimer = null; }
   const answered = T.qs.filter(q=>q.ok!==null).length;
@@ -395,6 +407,8 @@ function finishArenaSession(T){
 
   state.xp += T.score;
   touchStreak();
+  T.rewarded = true;
+  claimReward("arena:"+T.sessionId);
   saveState();
 }
 function scoreForType(type){

@@ -168,8 +168,15 @@ function renderStudy(){
       view.blanked = new Set(); view.stageFor=null;
       const prevShards = shardsFor(p);
       p.stage = Math.max(p.stage, view.stage);
-      state.xp += 10;
-      const heartGain = refillArenaHearts(1);
+      /* T7: shard reveal is keyed on p.stage's all-time high (never
+         re-fires once a shard is out) — independent of the DAILY reward
+         claim below, which resets every day. Toggling Easier/Harder
+         within the same day past a stage you already claimed today
+         pays neither XP nor a heart; coming back tomorrow and passing
+         through it again still can. */
+      const rewarded = claimReward("stage:"+v.id+":"+view.stage);
+      let heartGain = 0;
+      if(rewarded){ state.xp += 10; heartGain = refillArenaHearts(1); }
       touchStreak();
       saveState();
       renderStudy();
@@ -178,6 +185,9 @@ function renderStudy(){
         const sr = body.querySelector(".study-relic .relic");
         if(sr) FX.burstAt(sr, {count:22});
         showToast(`✦ A shard breaks away! <strong>${r.name}</strong> · ${shardsFor(p)}/5 revealed${heartGain ? ` · 💛 +${heartGain}` : ""}`);
+      } else if(rewarded){
+        SFX.tap();
+        showToast(`Nice review. +10 XP${heartGain ? ` · 💛 +${heartGain}` : ""}`);
       } else {
         SFX.tap();
       }
@@ -189,13 +199,22 @@ function renderStudy(){
     } else if(due){
       openRecallCheck(v, "reseal");
     } else {
-      state.xp += 5;
-      const heartGain = refillArenaHearts(1);
+      /* T7: polishing an already-sealed, not-due verse used to pay +5 XP
+         and a heart on every single tap, forever -- the cheapest farm in
+         the app. Once per verse per day now; the polish itself (and the
+         reassurance of nextReviewText) still happens every time. */
+      const rewarded = claimReward("polish:"+v.id);
+      let heartGain = 0;
+      if(rewarded){ state.xp += 5; heartGain = refillArenaHearts(1); }
       touchStreak();
       saveState();
       renderStudy();
       SFX.tap();
-      showToast(`✦ Seal polished. +5 XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}`);
+      if(rewarded){
+        showToast(`✦ Seal polished. +5 XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}`);
+      } else {
+        showToast(`✦ Polished again — practice completed. Today's polish reward is already claimed. ${nextReviewText(p)}`);
+      }
     }
   };
 

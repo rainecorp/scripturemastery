@@ -223,6 +223,51 @@ function saveState(){
   if(window.__achvReady) checkAchievements();
 }
 
+/* =========================================================
+   DAILY REWARD LEDGER (T7)
+   ---------------------------------------------------------
+   Four actions used to pay real XP (and sometimes a heart) on every
+   single tap, forever: toggling Easier/Harder on an unsealed verse,
+   replaying Prove It, polishing an already-sealed seal, and finishing
+   an Arena round. None of that took real recall — the first three are
+   one button, repeatable with zero cognitive engagement, and none of
+   them recorded that they'd already paid out. A leaderboard over that
+   (T17) would just rank who has the most patience for tapping.
+
+   The fix is a daily claim ledger, not a lockout. Every one of these
+   actions still WORKS every time you do it — same animation, same
+   sound, same forward progress where progress is real (a shard, a
+   sealed verse, a review-ladder rung). Only the "and here is XP for
+   that" part is capped at once per (verse, action) per day. Practice
+   stays free and welcome; grinding the same click stops paying.
+
+   Deliberately NOT capped here, because they are not same-session
+   farms: sealing (state-monotonic, can only ever happen once per
+   verse) and re-sealing (already time-gated by REVIEW_LADDER, real
+   calendar days apart, not a button you can spam).
+   ========================================================= */
+function ensureDailyRewards(){
+  const today = localISODate();
+  if(!state.dailyRewards || state.dailyRewards.date !== today){
+    state.dailyRewards = { date: today, claimed: {} };
+  }
+  return state.dailyRewards;
+}
+function isRewardClaimed(key){
+  return !!ensureDailyRewards().claimed[key];
+}
+/* Atomic check-and-set: claims `key` and returns true the one time it
+   was actually new, false every time after (today). Callers gate the
+   XP/heart payout on the return value, never on a separate check --
+   there is no window between "is it claimed" and "claim it" for two
+   calls in the same tick to both slip through. */
+function claimReward(key){
+  const dr = ensureDailyRewards();
+  if(dr.claimed[key]) return false;
+  dr.claimed[key] = true;
+  return true;
+}
+
 let state = loadState();
 /* v2 migrations: habit calendar, streak shields, achievements, sharing, sound */
 (function migrateV2(){
@@ -371,3 +416,6 @@ SQ.checkinCount = checkinCount;
 SQ.nextStreakMilestone = nextStreakMilestone;
 SQ.streakTier = streakTier;
 SQ.touchStreak = touchStreak;
+SQ.ensureDailyRewards = ensureDailyRewards;
+SQ.isRewardClaimed = isRewardClaimed;
+SQ.claimReward = claimReward;

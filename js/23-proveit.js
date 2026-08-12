@@ -163,9 +163,23 @@ function renderProveIt(){
     document.getElementById("proveUndo").onclick=()=>{ if(proveState.builtIndex>0){proveState.builtIndex--;proveState.feedback="Previous phrase removed.";renderProveIt();} };
     document.getElementById("proveSkip").onclick=closeProveIt;
   }else{
-    state.xp+=15; touchStreak();
+    /* T7: Prove It was replayable forever for +15 XP every single
+       completion, no cap -- the puzzle itself resets fresh each open, so
+       nothing here ever remembered it had already paid out. p.provenIt
+       is a separate, genuinely one-time flag (the relic-glow unlock);
+       the XP is now capped at once per verse per day, keyed off it. */
     const p=state.progress[v.id];
-    if(!p.provenIt){p.provenIt=true;showToast(`🧩 <strong>${v.ref}</strong> proven! Its relic now glows on the shelf.`);}
+    const rewarded = claimReward("prove:"+v.id);
+    if(rewarded) state.xp+=15;
+    touchStreak();
+    if(!p.provenIt){
+      p.provenIt=true;
+      showToast(`🧩 <strong>${v.ref}</strong> proven! Its relic now glows on the shelf.${rewarded ? " +15 XP" : ""}`);
+    } else if(rewarded){
+      showToast(`🧩 Proven again! +15 XP`);
+    } else {
+      showToast(`🧩 Proven again — practice completed. Today's Prove It reward is already claimed.`);
+    }
     saveState(); SFX.fanfare(); FX.rain({count:70});
     document.getElementById("proveClose").onclick=closeProveIt;
   }
