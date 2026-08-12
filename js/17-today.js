@@ -151,7 +151,7 @@ function bindCheckinCard(body){
 }
 function renderToday(){
   const body = document.getElementById("body");
-  const started = VERSES.some(v=>{const p=state.progress[v.id]; return p.sealed || (p.stage||0)>0;});
+  const started = allPassages().some(v=>{const p=state.progress[v.id]; return p.sealed || (p.stage||0)>0;});
   const due = dueReviews();
   const greet = greetingLine();
   let html = "";
@@ -175,14 +175,16 @@ function renderToday(){
 
   if(!started){
     const first = recommendedVerse();
-    const heroStats = towerStats("Book of Mormon");
+    const campaign = campaignById(state.startingCampaignId) || activeCampaigns()[0];
+    const heroStats = towerStats(campaign.id);
+    const campaignTotal = campaign.passageIds.length;
     html += `
       <div class="hero-start">
         <div class="hero-flex">
-          <div class="hero-tower${heroStats.sealed>=heroStats.total?' full':''}"><img src="temple-towers/ancient-america-temple-assembled-preview.png" alt="The Ancient America Tower"></div>
+          <div class="hero-tower${heroStats.sealed>=heroStats.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt="${campaign.name}"></div>
           <div class="hero-copy">
-            <h2>Climb the<br>Ancient America Tower</h2>
-            <p>Twenty-five dark windows. Twenty-five locked chests. Behind each one, a verse worth carrying forever. Memorize your first scripture — easy ones absolutely count — and the first window lights up with your relic shining inside.</p>
+            <h2>Climb<br>${campaign.name}</h2>
+            <p>${campaignTotal} dark windows. ${campaignTotal} locked chests. Behind each one, a verse worth carrying forever. Memorize your first scripture — easy ones absolutely count — and the first window lights up with your relic shining inside.</p>
             <div class="hero-steps">
               <div class="hero-step"><div class="hs-icon">🧗</div><div class="hs-t">Climb</div><div class="hs-d">5 stages, each a little harder</div></div>
               <div class="hero-step"><div class="hs-icon">🗝️</div><div class="hs-t">Unlock</div><div class="hs-d">Recite it — the chest opens</div></div>
@@ -198,17 +200,17 @@ function renderToday(){
     const qp = state.progress[q.id];
     const qr = relicFor(q);
     const shards = shardsFor(qp);
-    const qt = TOWERS[q.volume];
-    const qs = towerStats(q.volume);
-    const qlog = climbLog(q.volume);
-    const choices = climbChoices(q.volume);
+    const campaign = primaryCampaignForPassage(q.id, view.campaignId || state.startingCampaignId);
+    const qs = towerStats(campaign.id);
+    const qlog = climbLog(campaign.id);
+    const choices = climbChoices(campaign.id);
     html += `
-      <div class="home-card climb-card" style="--thue:${qt.hue};--tsoft:${qt.soft}">
+      <div class="home-card climb-card" style="--thue:${campaign.hue};--tsoft:${campaign.soft}">
         <h3><span class="spark">🗼</span> Continue the climb</h3>
         <div class="climb-now">
-          <div class="cn-tower${qs.sealed>=qs.total?' full':''}"><img src="${qt.art.prefix}assembled-preview.png" alt=""></div>
+          <div class="cn-tower${qs.sealed>=qs.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt=""></div>
           <div class="cn-info">
-            <div class="cn-name">${qt.name}</div>
+            <div class="cn-name">${campaign.name}</div>
             <div class="cn-floor">Floor ${qlog.length+1} awaits · ${qs.sealed}/${qs.total} windows lit</div>
             <div class="ts-bar"><i style="width:${Math.round(qs.pct*100)}%"></i></div>
             <div class="cn-current">${(qp.stage||0)>0 ? `⛏️ In progress: <strong>${q.ref}</strong> · ${qr.name} · ${shards}/5 shards` : `Suggested next: <strong>${q.ref}</strong> · ${qr.name}`}</div>
@@ -227,7 +229,7 @@ function renderToday(){
                 ${relicHTML(c.v, 62)}
                 <div class="cc-info">
                   <div class="cc-ref">${c.v.ref}</div>
-                  <div class="cc-theme">${c.v.theme}</div>
+                  <div class="cc-theme">${c.v.topic}</div>
                   <div class="cc-meta">${d.emoji} ${d.label} · ${d.words} words${cStarted ? ` · ${shardsFor(cp)}/5 shards` : ""}</div>
                 </div>
               </div>`;
@@ -308,25 +310,24 @@ function renderToday(){
     </div>
 
     <div class="home-card">
-      <h3><span class="spark">🗼</span> The Four Towers</h3>
+      <h3><span class="spark">🗼</span> ${activeCampaigns().length === 4 ? "The Four Towers" : "Your Towers"}</h3>
       <div class="tower-strip">
-        ${VOLUME_ORDER.map(vol=>{
-          const t = TOWERS[vol];
-          const s = towerStats(vol);
+        ${activeCampaigns().map(campaign=>{
+          const s = towerStats(campaign.id);
           return `
-            <div class="tstrip" data-vol="${vol}" style="--thue:${t.hue}">
+            <div class="tstrip" data-campaign="${campaign.id}" style="--thue:${campaign.hue}">
               <div class="ts-info">
-                <div class="ts-name">${t.name}</div>
+                <div class="ts-name">${campaign.name}</div>
                 <div class="ts-count">${s.sealed}/${s.total} floors sealed${s.due?` · ${s.due} fading`:''}</div>
                 <div class="ts-bar"><i style="width:${Math.round(s.pct*100)}%"></i></div>
               </div>
-              <div class="ts-preview${s.sealed>=s.total?' full':''}"><img src="${t.art.prefix}assembled-preview.png" alt="" loading="lazy"></div>
+              <div class="ts-preview${s.sealed>=s.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt="" loading="lazy"></div>
             </div>`;
         }).join("")}
       </div>
     </div>`;
 
-  const recent = VERSES.filter(v=>state.progress[v.id].sealed)
+  const recent = allPassages().filter(v=>state.progress[v.id].sealed)
     .sort((a,b)=>(state.progress[b.id].sealedAt||0)-(state.progress[a.id].sealedAt||0))
     .slice(0,6);
   html += `
@@ -366,11 +367,11 @@ function renderToday(){
   const begin = document.getElementById("beginBtn");
   if(begin) begin.onclick = ()=> openStudy(recommendedVerse().id, false);
   const heroTower = document.getElementById("heroTower");
-  if(heroTower) heroTower.onclick = ()=>{ view.tab = "towers"; view.volume = "Book of Mormon"; render(); window.scrollTo({top:0}); };
+  if(heroTower) heroTower.onclick = ()=>{ view.tab = "towers"; view.campaignId = state.startingCampaignId; render(); window.scrollTo({top:0}); };
   const shelfGo = document.getElementById("shelfGo");
   if(shelfGo) shelfGo.onclick = ()=>{ view.tab = "shelf"; render(); window.scrollTo({top:0}); };
   body.querySelectorAll(".shelf-strip-item").forEach(el=>{
-    el.onclick = ()=> openRelicPop(VERSES.find(v=>v.id===el.dataset.id));
+    el.onclick = ()=> openRelicPop(passageById(el.dataset.id));
   });
   const trialBtn = document.getElementById("trialBtn");
   if(trialBtn) trialBtn.onclick = ()=>{ view.tab = "trials"; view.trialRound = null; render(); window.scrollTo({top:0}); };
@@ -378,14 +379,14 @@ function renderToday(){
     el.onclick = ()=> openStudy(el.dataset.id, false);
   });
   const qb = document.getElementById("questBtn");
-  if(qb) qb.onclick = ()=>{ view.tab = "towers"; view.volume = recommendedVerse().volume; render(); window.scrollTo({top:0}); };
+  if(qb) qb.onclick = ()=>{ const c = primaryCampaignForPassage(recommendedVerse().id, view.campaignId); view.tab = "towers"; view.campaignId = c.id; render(); window.scrollTo({top:0}); };
   const qa = document.getElementById("questAlt");
-  if(qa) qa.onclick = ()=>{ view.volume = recommendedVerse().volume; view.tab = "towers"; render(); };
+  if(qa) qa.onclick = ()=>{ const c = primaryCampaignForPassage(recommendedVerse().id, view.campaignId); view.campaignId = c.id; view.tab = "towers"; render(); };
   body.querySelectorAll(".review-item").forEach(el=>{
     el.onclick = ()=> openStudy(el.dataset.id, true);
   });
   body.querySelectorAll(".tstrip").forEach(el=>{
-    el.onclick = ()=>{ view.volume = el.dataset.vol; view.tab = "towers"; render(); };
+    el.onclick = ()=>{ view.campaignId = el.dataset.campaign; view.tab = "towers"; render(); };
   });
 }
 

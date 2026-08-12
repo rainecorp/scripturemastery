@@ -16,7 +16,7 @@
    Get the hash line for a passage you have just checked by hand by running
    this in the browser console:
 
-     copy(sourceRecordFor(VERSES.find(v=>v.ref === "1 Nephi 3:7"),
+     copy(sourceRecordFor(allPassages().find(v=>v.ref === "1 Nephi 3:7"),
                           "Current edition (churchofjesuschrist.org)", "your name"))
 
    RULES:

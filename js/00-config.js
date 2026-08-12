@@ -11,14 +11,13 @@
    WHAT DELIBERATELY DOES NOT:
      CLIMBER, STORE_KEY, FROM_DQ, HAD_SAVE_AT_BOOT  read location/localStorage
        at load — runtime environment, not configuration. Still in 03-state.
-     VOLUME_ORDER, POPULAR_REFS, TOWERS, RELICS      content, not tuning.
+     Campaigns, tracks, POPULAR_REFS, RELICS          content, not tuning.
      ACHIEVEMENTS, ACHV_CATS                         carry cur() closures over
        app functions; moving them would invert a load-order dependency.
      HL_ROLES, HL_LEXICON, HL_PHRASES                highlighter data, and
        HL_PHRASES is computed at load from the tokenizer.
-     SHARD_CLIPS, TV_ASSET                           render geometry. TV_ASSET
-       is about to be replaced by towerGeometry() in T11 — moving it now would
-       be churn against a rewrite.
+     SHARD_CLIPS, TV_ASSET                           render geometry. T9 made
+       tower height dynamic; T11 will extend its small/tall rendering cases.
 
    Load order: 00-namespace must come first (these SQ registrations need it),
    then this file, then 00-tokenize. Nothing here depends on the tokenizer.
@@ -77,10 +76,10 @@ const ARENA_ACHIEVEMENTS = [
   {id:"first_session",  emoji:"🌱", name:"Scripture Seeker",   desc:"Complete your first Arena session"},
   {id:"streak10",       emoji:"🔥", name:"Verse Builder",      desc:"Ten correct answers in a row"},
   {id:"perfect",        emoji:"✨", name:"Iron Rod Disciple",  desc:"A perfect Arena session"},
-  {id:"all_books",      emoji:"🛡️", name:"Scripture Defender", desc:"Practiced scriptures from every book"},
+  {id:"all_books",      emoji:"🛡️", name:"Scripture Defender", desc:"Practiced scriptures from every campaign"},
   {id:"recite_no_hints",emoji:"🎤", name:"Master Reciter",     desc:"Recited a memorized scripture without hints"},
-  {id:"book_area",      emoji:"📖", name:"Keeper of the Word", desc:"Completed one Book Mastery area"},
-  {id:"book_mastery",   emoji:"🏆", name:"Arena Champion",     desc:"Completed an entire Book Mastery Challenge"},
+  {id:"book_area",      emoji:"📖", name:"Keeper of the Word", desc:"Completed one Campaign Mastery area"},
+  {id:"book_mastery",   emoji:"🏆", name:"Arena Champion",     desc:"Completed an entire Campaign Mastery Challenge"},
   {id:"grand_mastery",  emoji:"👑", name:"Scripture Master",   desc:"Completed the Grand Scripture Challenge"},
   {id:"mastered25",     emoji:"🥉", name:"25 Mastered",        desc:"Mastered 25 scriptures"},
   {id:"mastered50",     emoji:"🥈", name:"50 Mastered",        desc:"Mastered 50 scriptures"},

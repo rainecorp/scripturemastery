@@ -26,8 +26,11 @@ function renderTrials(){
 function renderArenaSetup(){
   const body = document.getElementById("body");
   const a = ensureArena();
+  const campaigns = activeCampaigns();
   const due = dueReviews().length;
-  const bookLabel = a.filters.books.length===VOLUME_ORDER.length ? "All books" : a.filters.books.map(displayVolumeName).join(", ");
+  const campaignLabel = a.filters.campaigns.length===campaigns.length
+    ? "All campaigns"
+    : a.filters.campaigns.map(id=>displayCampaignName(id)).join(", ");
   const statusLabel = {all:"All scriptures", memorized:"Memorized", not_yet:"Not yet memorized"}[a.filters.status];
   const rankCount = a.achievements.length;
   const settingsOpen = !!view.arenaSettingsOpen;
@@ -109,7 +112,7 @@ function renderArenaSetup(){
             <div class="mc-play">▶ Play</div>
           </div>
         </div>
-        <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${statusLabel}</strong> · <strong>${bookLabel}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
+        <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${statusLabel}</strong> · <strong>${campaignLabel}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
       </div>
 
       <div class="arena-card" style="margin-bottom:16px; text-align:left;">
@@ -147,9 +150,9 @@ function renderArenaSetup(){
           </div>
         </div>
         <div class="af-section">
-          <div class="af-title">Step 2 · Which book(s)</div>
-          <div class="af-row" id="afBooks">
-            ${VOLUME_ORDER.map(vol=>`<button class="af-chip ${a.filters.books.includes(vol)?'active':''}" data-book="${vol}">${displayVolumeName(vol)}</button>`).join("")}
+          <div class="af-title">Step 2 · Which campaign(s)</div>
+          <div class="af-row" id="afCampaigns">
+            ${campaigns.map(c=>`<button class="af-chip ${a.filters.campaigns.includes(c.id)?'active':''}" data-campaign="${c.id}">${c.shortName}</button>`).join("")}
           </div>
         </div>
         <div class="af-section">
@@ -162,26 +165,25 @@ function renderArenaSetup(){
 
       <div class="arena-formats">
         <div class="arena-card">
-          <h4>📖 Book Mastery Challenges</h4>
-          <p>Five areas of five scriptures each — clear every area to master the book.</p>
+          <h4>📖 Campaign Mastery Challenges</h4>
+          <p>Every tower is divided into five areas sized to its passage count — clear every area to master the campaign.</p>
           <div class="arena-book-grid">
-            ${VOLUME_ORDER.map(vol=>{
-              const t = TOWERS[vol];
-              const bm = a.bookMastery[vol];
-              const doneAreas = bm.areas.filter(Boolean).length;
-              const s = towerStats(vol);
+            ${campaigns.map(campaign=>{
+              const mastery = a.campaignMastery[campaign.id];
+              const doneAreas = mastery.areas.filter(Boolean).length;
+              const s = towerStats(campaign.id);
               return `
-                <div class="arena-book-card" data-vol="${vol}" style="--thue:${t.hue}">
-                  <div class="abc-name">${t.icon} ${displayVolumeName(vol)}</div>
-                  <div class="abc-sub">${doneAreas}/5 areas · ${s.sealed}/25 mastered</div>
-                  <div class="abc-areas">${bm.areas.map(d=>`<div class="abc-area-dot ${d?'done':''}"></div>`).join("")}</div>
+                <div class="arena-book-card" data-campaign="${campaign.id}" style="--thue:${campaign.hue}">
+                  <div class="abc-name">${campaign.icon} ${campaign.shortName}</div>
+                  <div class="abc-sub">${doneAreas}/5 areas · ${s.sealed}/${s.total} mastered</div>
+                  <div class="abc-areas">${mastery.areas.map(d=>`<div class="abc-area-dot ${d?'done':''}"></div>`).join("")}</div>
                 </div>`;
             }).join("")}
           </div>
         </div>
         <div class="arena-card">
           <h4>👑 Grand Scripture Challenge</h4>
-          <p>Ten areas of ten scriptures, drawn from every book and growing harder as you climb. ${a.grand.areas.filter(Boolean).length}/10 areas complete.</p>
+          <p>Ten areas of ten scriptures, drawn from every campaign and growing harder as you climb. ${a.grand.areas.filter(Boolean).length}/10 areas complete.</p>
           <div class="abc-areas">${a.grand.areas.map(d=>`<div class="abc-area-dot ${d?'done':''}"></div>`).join("")}</div>
           <button class="btn primary" id="arenaGrand" style="margin-top:10px;">${a.grand.areas.every(Boolean) ? "Replay from Area 1 ▸" : `Start Area ${a.grand.areas.findIndex(x=>!x)+1} ▸`}</button>
         </div>
@@ -203,12 +205,12 @@ function renderArenaSetup(){
   body.querySelectorAll("#afStatus .af-chip").forEach(b=>{
     b.onclick = ()=>{ a.filters.status = b.dataset.status; saveState(); renderArenaSetup(); };
   });
-  body.querySelectorAll("#afBooks .af-chip").forEach(b=>{
+  body.querySelectorAll("#afCampaigns .af-chip").forEach(b=>{
     b.onclick = ()=>{
-      const vol = b.dataset.book;
-      const idx = a.filters.books.indexOf(vol);
-      if(idx>=0){ if(a.filters.books.length>1) a.filters.books.splice(idx,1); }
-      else a.filters.books.push(vol);
+      const campaignId = b.dataset.campaign;
+      const idx = a.filters.campaigns.indexOf(campaignId);
+      if(idx>=0){ if(a.filters.campaigns.length>1) a.filters.campaigns.splice(idx,1); }
+      else a.filters.campaigns.push(campaignId);
       saveState(); renderArenaSetup();
     };
   });
@@ -241,10 +243,10 @@ function renderArenaSetup(){
   });
   body.querySelectorAll(".arena-book-card").forEach(el=>{
     el.onclick = ()=>{
-      const vol = el.dataset.vol;
-      const bm = a.bookMastery[vol];
-      const area = bm.areas.every(Boolean) ? 0 : bm.areas.findIndex(x=>!x);
-      view.trialRound = makeArenaRound({kind:"book", vol, area});
+      const campaignId = el.dataset.campaign;
+      const mastery = a.campaignMastery[campaignId];
+      const area = mastery.areas.every(Boolean) ? 0 : mastery.areas.findIndex(x=>!x);
+      view.trialRound = makeArenaRound({kind:"campaign", campaignId, area});
       renderTrials(); window.scrollTo({top:0});
     };
   });
@@ -263,7 +265,7 @@ function renderArenaSession(){
   const isBlitz = T.mode.kind==="blitz";
   let modeLabel;
   if(T.mode.kind==="quick") modeLabel = "Quick Practice";
-  else if(T.mode.kind==="book") modeLabel = `${TOWERS[T.mode.vol].name} · Area ${T.mode.area+1}/5`;
+  else if(T.mode.kind==="campaign") modeLabel = `${campaignById(T.mode.campaignId).name} · Area ${T.mode.area+1}/5`;
   else if(T.mode.kind==="grand") modeLabel = `Grand Challenge · Area ${T.mode.area+1}/10`;
   else if(isBlitz) modeLabel = "⚡ Lightning Round";
   else if(T.mode.kind==="quest"){
@@ -384,9 +386,9 @@ function renderArenaSession(){
     if(q.type==="text2ref" || q.type==="timedRecall"){
       prompt = `<div class="tq-kicker">Whose words are these?</div><div class="tq-text">"${trialSnippet(q.v.text,26)}"</div>`;
     } else if(q.type==="ref2text"){
-      prompt = `<div class="tq-kicker">How does it begin?</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.theme}</div>`;
+      prompt = `<div class="tq-kicker">How does it begin?</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.topic}</div>`;
     } else {
-      prompt = `<div class="tq-kicker">Which scripture teaches…</div><div class="tq-text">"${q.v.theme}"</div>`;
+      prompt = `<div class="tq-kicker">Which scripture teaches…</div><div class="tq-text">"${q.v.topic}"</div>`;
     }
     shell(`
       ${q.type==="timedRecall" ? `<div class="ta-timer-wrap"><span class="ta-timer-bar" id="taTimerBar" style="width:100%"></span></div>` : ""}
@@ -694,7 +696,7 @@ function renderArenaSession(){
     }
   } else if(q.type==="fullRecitation"){
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Full recitation</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.theme}</div>
+      <div class="tq-card"><div class="tq-kicker">Full recitation</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.topic}</div>
         <p style="margin-top:10px;color:#b9aef2;font-size:12.5px;font-weight:700;">Recite the entire scripture aloud from memory, then be honest with yourself.</p>
       </div>
       ${q.peekOpen ? `<div class="recite-peek">"${numberedVerseText(q.v)}"</div>` : ``}
@@ -741,7 +743,7 @@ function renderArenaResults(){
   const improved = [...new Set(T.qs.filter(q=>q.ok && !state.progress[q.v.id].sealed).map(q=>q.v.id))];
   const mastered = [...new Set(T.qs.filter(q=>q.ok && state.progress[q.v.id].sealed).map(q=>q.v.id))];
   let challengeLine = "Quick Practice session";
-  if(T.mode.kind==="book") challengeLine = `${TOWERS[T.mode.vol].name} · Area ${T.mode.area+1}/5 ${perfect ? "— cleared ✦" : "(clear all questions to master this area)"}`;
+  if(T.mode.kind==="campaign") challengeLine = `${campaignById(T.mode.campaignId).name} · Area ${T.mode.area+1}/5 ${perfect ? "— cleared ✦" : "(clear all questions to master this area)"}`;
   if(T.mode.kind==="grand") challengeLine = `Grand Scripture Challenge · Area ${T.mode.area+1}/10 ${perfect ? "— cleared ✦" : "(clear all questions to master this area)"}`;
   if(T.mode.kind==="quest"){ const qd = questDef(T.mode.questId); challengeLine = qd ? `${qd.emoji} Quest round · ${qd.name}` : "Quest round"; }
   if(isBlitz) challengeLine = `⚡ Lightning Round · ${T.correct} correct in ${BLITZ_SECONDS}s${T.correct >= a.blitz.best && T.correct>0 ? " — new best!" : ""}`;

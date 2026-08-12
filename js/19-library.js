@@ -19,7 +19,7 @@ function libraryFilters(){
   ];
 }
 function versesForCurrentFilter(){
-  let list = VERSES.slice();
+  let list = allPassages();
   const f = view.filter || "gettingStarted";
   if(f === "gettingStarted"){
     return list
@@ -65,7 +65,7 @@ function cardHTML(v){
       ${popularBookmarkHTML(v)}
       <div class="difficulty-badge" title="${p.sealed ? 'Sealed' : `${diff.label} · ${diff.words} words`}">${p.sealed ? '✨' : diff.emoji}</div>
       <div class="ref">${v.ref}</div>
-      <div class="theme">${v.theme}</div>
+      <div class="theme">${v.topic}</div>
       <div class="stage-row">
         ${STAGES.map((s,i)=>`<div class="pip ${p.sealed?'sealed':(i<p.stage?'done':'')}"></div>`).join("")}
       </div>
@@ -85,11 +85,13 @@ function renderLibrary(){
   if(selected.length === 0){
     html += `<div class="empty">No scriptures match this filter yet.</div>`;
   } else {
-    VOLUME_ORDER.forEach(vol=>{
-      const items = selected.filter(v=>v.volume===vol);
+    const rendered = new Set();
+    activeCampaigns().forEach(campaign=>{
+      const ids = new Set(campaign.passageIds);
+      const items = selected.filter(v=>ids.has(v.id) && !rendered.has(v.id));
       if(!items.length) return;
-      html += `<div class="volume"><h2>${displayVolumeName(vol)}</h2><div class="verse-grid">`;
-      items.forEach(v=>{ html += cardHTML(v); });
+      html += `<div class="campaign-group"><h2>${campaign.shortName}</h2><div class="verse-grid">`;
+      items.forEach(v=>{ rendered.add(v.id); html += cardHTML(v); });
       html += `</div></div>`;
     });
   }

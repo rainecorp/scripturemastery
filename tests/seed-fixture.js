@@ -3,7 +3,7 @@
    Used with tests/fingerprint.js so a before/after comparison is exact:
    same XP, same streak, same seals, same due dates relative to today.
 
-   Run from the page console (or via javascript_tool):
+   Open /tests/seed-fixture.html, or run from the page console:
      (function(){const x=new XMLHttpRequest();x.open("GET","/tests/seed-fixture.js",false);x.send();return eval(x.responseText);})()
    then reload. */
 (function(){
@@ -14,26 +14,27 @@
     nextReviewAt: now + offDays*D, provenIt: lvl > 1
   });
   const st = {
+    schemaVersion:2, track:"seminary", translation:"lds2013", startingCampaignId:"camp_retired_bom",
     xp:1240, streak:6, bestStreak:9, lastDay:new Date().toDateString(),
     shields:1, shares:2, resealsTotal:5, sound:true, achv:{unlocked:{}},
     calendar: Object.fromEntries([0,1,2,3,4,5].map(i=>[iso(now - i*D), {a:1,c:1}])),
     progress: {
-      "v_1_nephi_3_7":     s(2,-1),   // due now
-      "v_2_nephi_2_25":    s(1, 3),
-      "v_2_nephi_32_3":    s(0, 1),
-      "v_mosiah_2_17":     s(3,12),
-      "v_alma_32_21":      {stage:2, sealed:false},
-      "v_helaman_5_12":    {stage:1, sealed:false},
-      "v_john_3_5":        s(6,90),   // eternal
-      "v_matthew_5_14_16": s(1,-2),   // due now
-      "v_dandc_6_36":      s(0, 5),
-      "v_moses_1_39":      {stage:3, sealed:false}
+      "p_05aa9da7": s(2,-1),   // 1 Nephi 3:7 — due now
+      "p_de9f74d8": s(1, 3),   // 2 Nephi 2:25
+      "p_4e057f38": s(0, 1),   // 2 Nephi 32:3
+      "p_a0035b2c": s(3,12),   // Mosiah 2:17
+      "p_84f05c78": {stage:2, sealed:false}, // Alma 32:21
+      "p_d3fb452d": {stage:1, sealed:false}, // Helaman 5:12
+      "p_fd2f227d": s(6,90),   // John 3:5 — eternal
+      "p_23b0f988": s(1,-2),   // Matthew 5:14–16 — due now
+      "p_66e12a62": s(0, 5),   // D&C 8:2–3
+      "p_b549f0a6": {stage:3, sealed:false}  // Moses 1:39
     },
     climb: {
-      "Book of Mormon":["v_1_nephi_3_7","v_2_nephi_2_25","v_2_nephi_32_3","v_mosiah_2_17"],
-      "New Testament":["v_john_3_5","v_matthew_5_14_16"],
-      "Doctrine and Covenants":["v_dandc_6_36"],
-      "Old Testament":[]
+      "camp_retired_bom":["p_05aa9da7","p_de9f74d8","p_4e057f38","p_a0035b2c"],
+      "camp_retired_nt":["p_fd2f227d","p_23b0f988"],
+      "camp_retired_dc":["p_66e12a62"],
+      "camp_retired_ot":[]
     },
     /* Pin today's Arena quests. ensureArenaQuests() otherwise picks three at
        random on every fresh day, which makes Today and the Arena setup screen

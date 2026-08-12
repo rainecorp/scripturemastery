@@ -37,7 +37,7 @@ function sealCondition(p){
   return {id:"cracked", label:"Cracked", cls:"cond-cracked"};
 }
 function dueReviews(){
-  return VERSES
+  return allPassages()
     .filter(v=>isDue(state.progress[v.id]))
     .sort((a,b)=>state.progress[a.id].nextReviewAt - state.progress[b.id].nextReviewAt);
 }

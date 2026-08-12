@@ -7,28 +7,27 @@
    ========================================================= */
 function renderShelf(){
   const body = document.getElementById("body");
-  const total = VERSES.length;
-  const claimed = VERSES.filter(v=>state.progress[v.id].sealed).length;
+  const total = allPassages().length;
+  const claimed = allPassages().filter(v=>state.progress[v.id].sealed).length;
   let html = `
     <div class="shelf-head">
       <h2>🏺 The Relic Shelf</h2>
       <p>Climb the towers in any order you like — the shelf keeps every relic in the order of the book. Watch the dark spaces fill with light, one memorized verse at a time.</p>
       <div class="shelf-count">${claimed} / ${total} relics claimed</div>
     </div>`;
-  VOLUME_ORDER.forEach(vol=>{
-    const t = TOWERS[vol];
-    const vs = versesInVolume(vol);
+  activeCampaigns().forEach(campaign=>{
+    const vs = campaignPassages(campaign.id);
     const c = vs.filter(v=>state.progress[v.id].sealed).length;
     html += `
-      <div class="shelf-room" style="--thue:${t.hue}">
-        <h3><span>${t.icon} ${t.name}</span><span class="sr-count">${c}/${vs.length} claimed</span></h3>
+      <div class="shelf-room" style="--thue:${campaign.hue}">
+        <h3><span>${campaign.icon} ${campaign.name}</span><span class="sr-count">${c}/${vs.length} claimed</span></h3>
         <div class="shelf-grid">
           ${vs.map((v,i)=>{
             const p = state.progress[v.id];
             const cls = p.sealed ? "claimed" : ((p.stage||0)>0 ? "waking" : "dark");
-            const fl = floorOf(v);
+            const fl = floorOf(v, campaign.id);
             return `
-              <div class="shelf-slot ${cls}" data-id="${v.id}" title="${v.theme}">
+              <div class="shelf-slot ${cls}" data-id="${v.id}" title="${v.topic}">
                 <div class="ss-num">${i+1}</div>
                 ${relicHTML(v, 58)}
                 <div class="ss-ref">${v.ref}</div>
@@ -43,7 +42,7 @@ function renderShelf(){
   html += `<footer class="hint">Tap any relic to see its verse. Dim relics are still buried — every memory stage you pass uncovers another shard.</footer>`;
   body.innerHTML = html;
   body.querySelectorAll(".shelf-slot").forEach(el=>{
-    el.onclick = ()=> openRelicPop(VERSES.find(v=>v.id===el.dataset.id));
+    el.onclick = ()=> openRelicPop(passageById(el.dataset.id));
   });
 }
 

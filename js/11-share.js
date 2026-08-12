@@ -22,13 +22,15 @@ async function shareText(text){
 }
 function shareTextForVerse(v){
   const r = relicFor(v);
-  const fl = floorOf(v);
-  return `✦ I memorized ${v.ref} in Scripture Quest! “${r.motto}” — that's ${sealedTotal()} verse${sealedTotal()===1?"":"s"} sealed${fl?` and Floor ${fl} of ${TOWERS[v.volume].name} lit`:""}. 🏰🔥`;
+  const campaign = primaryCampaignForPassage(v.id, view.campaignId);
+  const fl = floorOf(v, campaign && campaign.id);
+  return `✦ I memorized ${v.ref} in Scripture Quest! “${r.motto}” — that's ${sealedTotal()} verse${sealedTotal()===1?"":"s"} sealed${fl && campaign?` and Floor ${fl} of ${campaign.name} lit`:""}. 🏰🔥`;
 }
 function drawShareCanvas(v, done){
   const r = relicFor(v);
   const d = difficultyForVerse(v);
-  const fl = floorOf(v);
+  const campaign = primaryCampaignForPassage(v.id, view.campaignId);
+  const fl = floorOf(v, campaign && campaign.id);
   const W = 1000, H = 1250;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
@@ -54,7 +56,7 @@ function drawShareCanvas(v, done){
     x.fillText(`${r.name} · ${d.trim.metal} relic`, W/2, 1010);
     x.fillStyle = "#aabbd8";
     x.font = "800 28px Georgia, serif";
-    x.fillText(`✦ Sealed${fl ? ` · Floor ${fl} of ${TOWERS[v.volume].name}` : ""}`, W/2, 1062);
+    x.fillText(`✦ Sealed${fl && campaign ? ` · Floor ${fl} of ${campaign.name}` : ""}`, W/2, 1062);
     x.fillStyle = "#f4b942";
     x.font = "900 30px Georgia, serif";
     x.fillText(`${sealedTotal()} verses sealed · ${state.streak}-day streak 🔥`, W/2, 1150);

@@ -4,7 +4,7 @@
 /* =========================================================
    VIEW STATE + SHELL
    ========================================================= */
-let view = {tab:"today", filter:"gettingStarted", volume:null, verseId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
+let view = {tab:"today", filter:"gettingStarted", campaignId:null, passageId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
 const app = document.getElementById("app");
 
 function nextRankInfo(){
@@ -16,7 +16,7 @@ function nextRankInfo(){
   return {curName, nextT, nextName, pct};
 }
 function render(){
-  const mastered = Object.values(state.progress).filter(p=>p.sealed).length;
+  const mastered = allPassages().filter(v=>state.progress[v.id] && state.progress[v.id].sealed).length;
   const due = dueReviews().length;
   const rk = nextRankInfo();
   const tier = streakTier(state.streak);
@@ -41,7 +41,7 @@ function render(){
           <div class="n"><span class="flame">🔥</span>${state.streak}${(state.shields||0) ? `<span class="shield-mini" title="Streak shields">🛡️${state.shields>1?"×"+state.shields:""}</span>` : ""}</div>
           <div class="l">Day streak</div>
         </div>
-        <div class="stat stat-tap" id="statSealed"><div class="n">${mastered}/${VERSES.length}</div><div class="l">Sealed</div></div>
+        <div class="stat stat-tap" id="statSealed"><div class="n">${mastered}/${allPassages().length}</div><div class="l">Sealed</div></div>
       </div>
       <div class="rank-bar" title="${rk.nextT ? `${rk.nextT - state.xp} XP to ${rk.nextName}` : "Highest rank reached"}">
         <div class="rank-bar-track"><i style="width:${rk.pct}%"></i></div>
@@ -86,8 +86,8 @@ function render(){
   app.querySelectorAll("nav.tabs button").forEach(b=>{
     b.onclick = ()=>{
       SFX.tap();
-      if(b.dataset.tab==='study' && !view.verseId){ view.verseId = recommendedVerse().id; view.stage = state.progress[view.verseId].stage; view.blanked = new Set(); view.reviewMode=false; }
-      if(b.dataset.tab==='towers'){ view.volume = null; }
+      if(b.dataset.tab==='study' && !view.passageId){ view.passageId = recommendedVerse().id; view.stage = state.progress[view.passageId].stage; view.blanked = new Set(); view.reviewMode=false; }
+      if(b.dataset.tab==='towers'){ view.campaignId = null; }
       view.tab = b.dataset.tab;
       render();
     };

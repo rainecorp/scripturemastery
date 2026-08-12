@@ -59,16 +59,17 @@
     catch(e){ out[name] = "ERROR: " + e.message; }
   }
 
-  const V = id => VERSES.find(v=>v.id===id) || VERSES[0];
+  const passages = allPassages();
+  const V = ref => passages.find(v=>v.ref===ref) || passages[0];
 
   // ---- main tabs ----------------------------------------------------------
-  snap("today",        ()=>{ view.tab="today";  view.volume=null; render(); });
-  snap("towers",       ()=>{ view.tab="towers"; view.volume=null; render(); });
-  snap("tower.bom",    ()=>{ view.tab="towers"; view.volume="Book of Mormon"; render(); });
-  snap("tower.nt",     ()=>{ view.tab="towers"; view.volume="New Testament"; render(); });
-  snap("tower.dc",     ()=>{ view.tab="towers"; view.volume="Doctrine and Covenants"; render(); });
-  snap("tower.ot",     ()=>{ view.tab="towers"; view.volume="Old Testament"; render(); });
-  snap("shelf",        ()=>{ view.tab="shelf";  view.volume=null; render(); });
+  snap("today",        ()=>{ view.tab="today";  view.campaignId=null; render(); });
+  snap("towers",       ()=>{ view.tab="towers"; view.campaignId=null; render(); });
+  snap("tower.bom",    ()=>{ view.tab="towers"; view.campaignId="camp_retired_bom"; render(); });
+  snap("tower.nt",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_nt"; render(); });
+  snap("tower.dc",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_dc"; render(); });
+  snap("tower.ot",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_ot"; render(); });
+  snap("shelf",        ()=>{ view.tab="shelf";  view.campaignId=null; render(); });
 
   // ---- collection, every filter ------------------------------------------
   libraryFilters().forEach(f=>{
@@ -76,21 +77,21 @@
   });
 
   // ---- study, every stage, sealed + unsealed + review mode ----------------
-  ["v_1_nephi_3_7","v_alma_32_21","v_john_3_5","v_dandc_121_34_36"].forEach(id=>{
-    const v = V(id);
+  ["1 Nephi 3:7","Alma 32:21","John 3:5","D&C 121:34–36"].forEach(ref=>{
+    const v = V(ref);
     [0,1,2,3,4].forEach(stg=>{
       snap(`study.${v.id}.s${stg}`, ()=>{
-        view.tab="study"; view.verseId=v.id; view.stage=stg;
+        view.tab="study"; view.passageId=v.id; view.stage=stg;
         view.blanked=new Set(); view.reviewMode=false; view.highlightMode=true;
         render();
       });
     });
     snap(`study.${v.id}.hl-off`, ()=>{
-      view.tab="study"; view.verseId=v.id; view.stage=1;
+      view.tab="study"; view.passageId=v.id; view.stage=1;
       view.blanked=new Set(); view.highlightMode=false; render();
     });
     snap(`study.${v.id}.review`, ()=>{
-      view.tab="study"; view.verseId=v.id; view.stage=4;
+      view.tab="study"; view.passageId=v.id; view.stage=4;
       view.blanked=new Set(); view.reviewMode=true; view.highlightMode=true; render();
     });
   });
@@ -107,7 +108,7 @@
     snap("arena.q."+type, ()=>{
       seed = 987654321;
       const T = makeArenaRound({kind:"quick", label:"Quick"});
-      T.qs = [buildArenaQuestion(V("v_1_nephi_3_7"), type, ARENA_DIFF[ensureArena().difficulty])];
+      T.qs = [buildArenaQuestion(V("1 Nephi 3:7"), type, ARENA_DIFF[ensureArena().difficulty])];
       T.i = 0;
       view.tab="trials"; view.trialRound = T; render();
     });
@@ -117,22 +118,22 @@
     seed = 55555;
     const T = makeArenaRound({kind:"quick", label:"Quick"});
     T.done = true; T.correct = 5; T.score = 420; T.bestCombo = 4;
-    T.booksTouched = new Set(["Book of Mormon"]);
+    T.campaignsTouched = new Set(["camp_retired_bom"]);
     view.tab="trials"; view.trialRound = T; render();
   });
   view.trialRound = null;
 
   // ---- overlays -----------------------------------------------------------
   snap("overlay.achv",  ()=>{ openAchvPop(); },  document.getElementById("achvPop"));
-  snap("overlay.relic", ()=>{ openRelicPop(V("v_1_nephi_3_7")); }, document.getElementById("relicPop"));
+  snap("overlay.relic", ()=>{ openRelicPop(V("1 Nephi 3:7")); }, document.getElementById("relicPop"));
   snap("overlay.prove", ()=>{
     seed = 24680;
-    openProveIt ? openProveIt(V("v_1_nephi_3_7")) : startProveIt(V("v_1_nephi_3_7"));
+    openProveIt ? openProveIt(V("1 Nephi 3:7")) : startProveIt(V("1 Nephi 3:7"));
   }, document.getElementById("proveIt"));
 
   // ---- pure functions over every passage ---------------------------------
   let vHTML = "", chunks = "", tokens = "", nums = "", cls = "";
-  VERSES.forEach(v=>{
+  passages.forEach(v=>{
     const marks = verseNumberMap(v);
     [0,1,2,3].forEach(s=>{ vHTML += renderVerseHTML(v.text, s, new Set(), marks, true); });
     vHTML  += renderVerseHTML(v.text, 1, pickBlankSet(v.text, .3), marks, false);
@@ -146,9 +147,9 @@
   out["fn.tokenize"]        = h(tokens) + ":" + tokens.length;
   out["fn.verseNumbers"]    = h(nums) + ":" + nums.length;
   out["fn.classifyVerse"]   = h(cls) + ":" + cls.length;
-  out["fn.difficulty"]      = h(VERSES.map(v=>difficultyLabelForVerse(v)+difficultyForVerse(v).tier).join("|"));
-  out["fn.verseIds"]        = h(VERSES.map(v=>v.id).join("|"));
-  out["fn.relicHTML"]       = h(VERSES.map(v=>relicHTML(v,64)).join(""));
+  out["fn.difficulty"]      = h(passages.map(v=>difficultyLabelForVerse(v)+difficultyForVerse(v).tier).join("|"));
+  out["fn.passageIds"]      = h(passages.map(v=>v.id).join("|"));
+  out["fn.relicHTML"]       = h(passages.map(v=>relicHTML(v,64)).join(""));
 
   // ---- computed styles ----------------------------------------------------
   // Rule COUNT alone would not catch a cascade-order regression, and splitting
@@ -171,27 +172,27 @@
     out["css."+label] = h(acc) + ":" + acc.length;
   }
 
-  probe("today", ()=>{ view.tab="today"; view.volume=null; render(); },
+  probe("today", ()=>{ view.tab="today"; view.campaignId=null; render(); },
     ["header.top",".brand h1",".rank-chip",".rank-bar-track i","nav.tabs","nav.tabs button",
      "nav.tabs button.active",".stat",".stat .n","#body",".wrap"]);
-  probe("towers", ()=>{ view.tab="towers"; view.volume=null; render(); }, ["#body",".card","#body > *"]);
-  probe("tower.detail", ()=>{ view.tab="towers"; view.volume="Book of Mormon"; render(); },
+  probe("towers", ()=>{ view.tab="towers"; view.campaignId=null; render(); }, ["#body",".card","#body > *"]);
+  probe("tower.detail", ()=>{ view.tab="towers"; view.campaignId="camp_retired_bom"; render(); },
     [".tower-cols",".tv-layer",".tv-viewport","#body img"]);
-  probe("shelf",  ()=>{ view.tab="shelf";  view.volume=null; render(); }, [".shelf-head","#body",".relic"]);
+  probe("shelf",  ()=>{ view.tab="shelf";  view.campaignId=null; render(); }, [".shelf-head","#body",".relic"]);
   probe("library",()=>{ view.tab="library"; view.filter="all"; render(); },
     [".legend-row",".legend-pill",".filter-chip","#body"]);
-  probe("study",  ()=>{ view.tab="study"; view.verseId=V("v_1_nephi_3_7").id; view.stage=1;
+  probe("study",  ()=>{ view.tab="study"; view.passageId=V("1 Nephi 3:7").id; view.stage=1;
                         view.blanked=new Set(); render(); },
     ["#body",".w",".btn",".btn.primary"]);
   probe("arena",  ()=>{ view.tab="trials"; view.trialRound=null; render(); },
     [".arena-setup",".mode-grid",".btn.primary","#body"]);
-  probe("overlays", ()=>{ openAchvPop(); openRelicPop(V("v_1_nephi_3_7")); },
+  probe("overlays", ()=>{ openAchvPop(); openRelicPop(V("1 Nephi 3:7")); },
     ["#achvPop",".relic-pop-stage","#relicPop",".cer"]);
   try { closeRelicPop(); } catch(e){}
   document.querySelectorAll(".cer").forEach(el=>el.style.display="");
 
   // ---- inventory ----------------------------------------------------------
-  out["_meta.verses"]  = String(VERSES.length);
+  out["_meta.verses"]  = String(passages.length);
   out["_meta.scripts"] = String(document.scripts.length);
   out["_meta.sheets"]  = String(document.styleSheets.length);
   out["_meta.cssRules"] = String([...document.styleSheets].reduce((n,s)=>{
@@ -200,6 +201,6 @@
 
   Math.random = realRandom;
   if(typeof realStorageUsed === "function") window.storageUsedBytes = realStorageUsed;
-  view.tab = "today"; view.volume = null; view.trialRound = null;
+  view.tab = "today"; view.campaignId = null; view.trialRound = null;
   return JSON.stringify(out, Object.keys(out).sort(), 1);
 })();

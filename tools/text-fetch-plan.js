@@ -17,8 +17,10 @@
    =========================================================================== */
 const fs = require("fs");
 const ROOT = "/Users/boss-mode/Documents/scripture mastery/scripture-tower";
-const SQ = {};
-eval(fs.readFileSync(ROOT + "/data/passages.js", "utf8").replace("const DATA", "global.DATA"));
+let CONTENT_PACK = null;
+const SQ = {registerContentPack(pack){ CONTENT_PACK = pack; }};
+eval(fs.readFileSync(ROOT + "/data/passages.js", "utf8"));
+if(!CONTENT_PACK) throw new Error("Seminary content pack did not register.");
 
 const OT = {
   "Genesis":"gen","Exodus":"ex","Leviticus":"lev","Numbers":"num","Deuteronomy":"deut",
@@ -78,14 +80,14 @@ function parseRef(ref){
 
 const byUrl = new Map();
 const unmapped = [];
-Object.keys(DATA).forEach(vol=>DATA[vol].forEach(v=>{
+CONTENT_PACK.passages.forEach(v=>{
   const p = parseRef(v.ref);
   if(!p){ unmapped.push(v.ref + "  (unparsed)"); return; }
   const url = urlFor(p.book, p.ch);
   if(!url){ unmapped.push(v.ref + "  (no slug for book: " + p.book + ")"); return; }
   if(!byUrl.has(url)) byUrl.set(url, []);
   byUrl.get(url).push({ref:v.ref, verses:p.verses, text:v.text});
-}));
+});
 
 const plan = [...byUrl.entries()].map(([url, refs])=>({url, refs}));
 fs.writeFileSync(process.argv[2] || "/tmp/plan.json", JSON.stringify(plan, null, 1));

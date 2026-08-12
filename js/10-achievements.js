@@ -5,20 +5,25 @@
    ACHIEVEMENTS — app-wide, computed from state. Encouraging
    by design: every locked badge shows live progress.
    ========================================================= */
-function sealedTotal(){ return VERSES.filter(v=>state.progress[v.id].sealed).length; }
-function eternalTotal(){ return VERSES.filter(v=>isEternal(state.progress[v.id])).length; }
-function provenTotal(){ return VERSES.filter(v=>state.progress[v.id].provenIt).length; }
-function bestVolumeSealed(){ return Math.max(...VOLUME_ORDER.map(vol=>towerStats(vol).sealed)); }
+function sealedTotal(){ return allPassages().filter(v=>state.progress[v.id].sealed).length; }
+function eternalTotal(){ return allPassages().filter(v=>isEternal(state.progress[v.id])).length; }
+function provenTotal(){ return allPassages().filter(v=>state.progress[v.id].provenIt).length; }
+function hasCrownedCampaign(){
+  return activeCampaigns().some(c=>{
+    const s = towerStats(c.id);
+    return s.total > 0 && s.sealed === s.total;
+  }) ? 1 : 0;
+}
 const ACHIEVEMENTS = [
   {id:"first_shard", cat:"climb", emoji:"✨", name:"First Light",        desc:"Uncover your first relic shard", goal:1,
-    cur:()=> VERSES.some(v=>{const p=state.progress[v.id]; return p.sealed||(p.stage||0)>0;}) ? 1 : 0},
+    cur:()=> allPassages().some(v=>{const p=state.progress[v.id]; return p.sealed||(p.stage||0)>0;}) ? 1 : 0},
   {id:"first_seal", cat:"climb", emoji:"🏺", name:"Relic Keeper",       desc:"Seal your first verse", goal:1, cur:sealedTotal},
   {id:"seals_5",    cat:"climb", emoji:"🗼", name:"Five Floors High",   desc:"Seal 5 verses", goal:5, cur:sealedTotal},
   {id:"seals_10",   cat:"climb", emoji:"🌄", name:"Above the Mist",     desc:"Seal 10 verses", goal:10, cur:sealedTotal},
   {id:"seals_25",   cat:"climb", emoji:"🏰", name:"Tower Heart",        desc:"Seal 25 verses", goal:25, cur:sealedTotal},
   {id:"seals_50",   cat:"climb", emoji:"⛰️", name:"Summit Seeker",      desc:"Seal 50 verses", goal:50, cur:sealedTotal},
   {id:"seals_100",  cat:"climb", emoji:"🌟", name:"Keeper of All Words",desc:"Seal all 100 verses", goal:100, cur:sealedTotal},
-  {id:"crowned",    cat:"climb", emoji:"👑", name:"Crowned Tower",      desc:"Complete every floor of one tower", goal:25, cur:bestVolumeSealed},
+  {id:"crowned",    cat:"climb", emoji:"👑", name:"Crowned Tower",      desc:"Complete every floor of one tower", goal:1, cur:hasCrownedCampaign},
   {id:"eternal_1",  cat:"climb", emoji:"♾️", name:"Written on the Heart", desc:"Earn your first Eternal Seal", goal:1, cur:eternalTotal},
   {id:"eternal_5",  cat:"climb", emoji:"💎", name:"Unfading Five",      desc:"Hold 5 Eternal Seals", goal:5, cur:eternalTotal},
   {id:"proven_5",   cat:"climb", emoji:"🧩", name:"Proof Positive",     desc:"Prove 5 verses in perfect order", goal:5, cur:provenTotal},
@@ -64,11 +69,11 @@ function achvGo(id){
   const goTab = (tab, spot)=>{
     view.spot = spot || null;
     if(tab==="trials") view.trialRound = null;
-    if(tab==="towers") view.volume = null;
+    if(tab==="towers") view.campaignId = null;
     view.tab = tab; render(); window.scrollTo({top:0});
   };
   const goVerse = (v, review, spot)=>{ view.spot = spot || null; openStudy(v.id, !!review); };
-  const dueV = VERSES.find(v=>isDue(state.progress[v.id]));
+  const dueV = allPassages().find(v=>isDue(state.progress[v.id]));
   switch(id){
     case "first_shard": case "rank_scribe": case "rank_guardian": case "rank_keeper":
       goVerse(recommendedVerse(), false); break;
@@ -77,7 +82,7 @@ function achvGo(id){
     case "seals_5": case "seals_10": case "seals_25": case "seals_50": case "seals_100": case "crowned":
       goTab("towers"); break;
     case "proven_5": {
-      const t = VERSES.find(v=>state.progress[v.id].sealed && !state.progress[v.id].provenIt) || recommendedVerse();
+      const t = allPassages().find(v=>state.progress[v.id].sealed && !state.progress[v.id].provenIt) || recommendedVerse();
       goVerse(t, isDue(state.progress[t.id]), "proveItBtn"); break;
     }
     case "eternal_1": case "eternal_5": case "reseal_10":
@@ -211,7 +216,7 @@ function openAchvPop(){
 SQ.sealedTotal = sealedTotal;
 SQ.eternalTotal = eternalTotal;
 SQ.provenTotal = provenTotal;
-SQ.bestVolumeSealed = bestVolumeSealed;
+SQ.hasCrownedCampaign = hasCrownedCampaign;
 SQ.ACHIEVEMENTS = ACHIEVEMENTS;
 SQ.ACHV_CATS = ACHV_CATS;
 SQ.achvCur = achvCur;

@@ -6,10 +6,10 @@
    climber rides the tower up one floor.
    ========================================================= */
 let pendingClimb = null;
-function playSealCeremony(v, floorN){
+function playSealCeremony(v, floorN, campaignId){
   const cer = document.getElementById("ceremony");
   if(!cer){ render(); return; }
-  const t = TOWERS[v.volume];
+  const campaign = primaryCampaignForPassage(v.id, campaignId);
   const r = relicFor(v);
   const d = difficultyForVerse(v);
   const art = (RELIC_IMAGES && r.designed)
@@ -30,7 +30,7 @@ function playSealCeremony(v, floorN){
         <div class="cer-motto">“${r.motto}”</div>
         <div class="cer-ref">${v.ref} · ${d.trim.metal} relic · +50 XP</div>
       </div>
-      <button class="btn primary cer-btn" id="cerClimb">Climb ${t.name} ▸</button>
+      <button class="btn primary cer-btn" id="cerClimb">Climb ${campaign.name} ▸</button>
       <div class="cer-skip" id="cerShare">📣 share this victory ▸</div>
       <div class="cer-skip" id="cerSkip">or place it on the shelf ▸</div>
     </div>`;
@@ -43,8 +43,8 @@ function playSealCeremony(v, floorN){
   const close = ()=>{ cer.classList.remove("show","phase-shake","phase-open","phase-text"); cer.innerHTML = ""; };
   document.getElementById("cerClimb").onclick = ()=>{
     close();
-    pendingClimb = {vol: v.volume, floor: floorN};
-    view.tab = "towers"; view.volume = v.volume;
+    pendingClimb = {campaignId: campaign.id, floor: floorN};
+    view.tab = "towers"; view.campaignId = campaign.id;
     render();
     window.scrollTo({top:0});
   };

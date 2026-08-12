@@ -97,12 +97,10 @@ eq(tokenWords("Joseph Smith—History")[1].norm, "smithhistory", "internal em da
 /* --------------------------------------------------- the real passage set -- */
 section("all 100 shipped passages");
 
-global.SQ = {}; global.window = { SQ: global.SQ };
+const {registerContentPack, registeredContentPacks, compileContentPacks} = require("../js/00-content.js");
+global.SQ = {registerContentPack}; global.window = { SQ: global.SQ };
 eval(fs.readFileSync(path.join(__dirname, "..", "data", "passages.js"), "utf8"));
-const DATA = global.SQ.DATA;
-const VOLUMES = ["Book of Mormon","New Testament","Doctrine and Covenants","Old Testament"];
-const ALL = [];
-VOLUMES.forEach(vol => DATA[vol].forEach(v => ALL.push(v)));
+const ALL = compileContentPacks(registeredContentPacks(), {}).passages;
 
 eq(ALL.length, 100, "100 passages loaded");
 

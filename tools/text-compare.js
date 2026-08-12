@@ -10,8 +10,6 @@
    silent corruption the verification system exists to prevent. */
 const fs = require("fs");
 const ROOT = "/Users/boss-mode/Documents/scripture mastery/scripture-tower";
-const SQ = {};
-eval(fs.readFileSync(ROOT + "/data/passages.js", "utf8").replace("const DATA", "global.DATA"));
 const plan = require("./plan.json");
 const fetched = require("./fetched-all.json");
 const { textHash } = require(ROOT + "/js/00-verify.js");

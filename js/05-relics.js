@@ -70,7 +70,7 @@ function openRelicPop(v){
         <button class="rp-close" id="relicPopClose" aria-label="Close">✕</button>
         <div class="rp-relic">${relicHTML(v, 300)}</div>
         <div class="rp-ref">${v.ref}</div>
-        <div class="rp-theme">${v.theme}</div>
+        <div class="rp-theme">${v.topic}</div>
         <div class="rp-status">${statusChips}</div>
         <div class="rp-text">"${numberedVerseText(v)}"</div>
         <div class="rp-btns">

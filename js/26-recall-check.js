@@ -192,7 +192,7 @@ function renderRecallCheck(){
           <div class="recall-head">
             <div class="cer-kicker">${mode === "first" ? "✦ Recall Check — first seal" : "✦ Recall Check — re-seal"}</div>
             <div class="recall-ref">${escHTML(v.ref)}</div>
-            <div class="recall-theme">${escHTML(v.theme)}</div>
+            <div class="recall-theme">${escHTML(v.topic)}</div>
           </div>
           <p class="recall-instruction">Type the <strong>first letter</strong> of each word, in order, from memory. A near-miss on the keyboard costs nothing — only a real miss counts, and even three of those just reveal the word and move you on.</p>
           <div class="recall-slots-wrap"><div class="recall-slots">${recallSlotsHTML()}</div></div>
@@ -319,14 +319,14 @@ function renderRecallCheck(){
 function performSeal(v){
   const p = state.progress[v.id];
   sealVerse(p);
-  const floorN = recordClimb(v);
+  const climb = recordClimb(v, view.campaignId);
   emitBridge("seal", v, 25);
   state.xp += 50;
   const heartGain = refillArenaHearts(1);
   touchStreak();
   saveState();
   if(heartGain) setTimeout(()=> showToast(`💛 Arena heart restored by sealing ${v.ref}.`, true), 2600);
-  playSealCeremony(v, floorN);
+  playSealCeremony(v, climb.floor, climb.campaignId);
 }
 
 function performReseal(v, opts){

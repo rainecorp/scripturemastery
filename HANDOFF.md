@@ -12,7 +12,7 @@
 
 - **Local:** `/Users/boss-mode/Documents/scripture mastery/scripture-tower/`
 - **GitHub:** https://github.com/rainecorp/scripturemastery (branch `main`, currently the only branch)
-- Both are in sync as of the last push in this handoff. Run `git status` and `git log --oneline -1 origin/main` after `git fetch` to confirm before assuming otherwise.
+- The local branch contains the newest work and may be ahead of GitHub. Run `git status`, `git log --oneline -1`, and `git log --oneline -1 origin/main` after `git fetch` before assuming they are synchronized. Never push without the user's explicit request.
 
 There is also a folder named `scripture-tower 2/` beside this one. **Never edit it.** It was a byte-identical duplicate, now archived — it exists only as a pre-cleanup snapshot and will drift if touched.
 
@@ -31,23 +31,24 @@ Two other planning documents exist in this repo and are **historical, not curren
 
 **Preview:** `.claude/launch.json` starts `python3 -m http.server 8483` — a plain static server, no live-reload. If you're driving a browser tool against it and just edited a file, force a cache-bust reload (`location.replace("/index.html?n="+Date.now())`) rather than a plain refresh, or the browser may serve a stale cached copy.
 
-**Seeding a realistic state for manual testing:** `tests/seed-fixture.js` writes a mid-progress save (XP, streak, several sealed verses, a fixed Arena quest set so nothing randomizes) into `localStorage`. Load it via an `XMLHttpRequest`+`eval` in the browser console (see any recent commit's verification notes for the exact one-liner) before reloading.
+**Seeding a realistic state for manual testing:** open `tests/seed-fixture.html`; it loads `tests/seed-fixture.js`, writes a schema-current mid-progress save (XP, streak, sealed passages across several campaigns, and a fixed Arena quest set), then redirects to the real app.
 
 **Node test suites** (no framework, run directly):
 ```bash
 node tests/tokenize.test.js
 node tests/recall.test.js
 node tests/verify.test.js
+node tests/content.test.js
 ```
-These three cover the canonical tokenizer (T3), the Recall Check engine (T5), and text-verification metadata (T4b/T4c). They pass today (79 + 86 + 38 assertions).
+These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c), and T9's content/tower contracts. They pass today (**88 + 86 + 38 + 41 assertions**).
 
-**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `VERSES`, `SFX`, DOM globals) — they were never written to be `require()`-able. Only the small number of files explicitly tagged "tier 00" (`js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`) are dual-exported (`module.exports` *and* `SQ.*` registration) and safe to `require()` directly in Node. Everything else — including all of T4a's storage guard, T7's reward ledger, and T8's migration runner and export/import — was verified **live in a browser**, by loading the real app, seeding a fixture, and calling the real functions through `SQ.*` from the JS console/tool. If you need to verify a change to a file that isn't tier-00, that's the expected way to do it; don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
+**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, and campaign UI behavior — is verified in the real browser app with the seed fixture. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
 
 **Fingerprinting** (`tests/fingerprint.js`): a deterministic DOM + computed-style hash of every screen, used to *prove* a refactor changed nothing (or changed exactly what was intended and nothing else). Read the protocol comment at the top of that file before using it — it freezes `Math.random`, must be run before-and-after in one sitting (hashes aren't stable across days), and a handful of "movers" are always false positives worth understanding, not chasing.
 
 ## 5 · Current status
 
-All of **Phase A (Foundations)** and roughly half of **Phase B (Honest mastery)** are done, in order:
+All of **Phase A (Foundations)**, the completed Phase B work through T8, and the first Phase C ticket are done, in order:
 
 | Ticket | What it did |
 |---|---|
@@ -60,10 +61,11 @@ All of **Phase A (Foundations)** and roughly half of **Phase B (Honest mastery)*
 | T6 | Built the Recall Check UI (`js/26-recall-check.js`) and made it the *only* path to `sealVerse()`/`resealVerse()` — closing the "tap Seal 500 times" hole |
 | T7 | Closed four XP/heart farms (stage toggle, Prove It, polish, Arena session finish) behind a daily claim ledger |
 | T8 | `state.schemaVersion` + a real migration runner, a timestamped recovery key so a corrupt save is never silently lost, and pure `exportProgress`/`previewProgressImport`/`applyProgressImport` functions |
+| T9 | Replaced volume-keyed content with opaque passage IDs and Passage/Campaign/Track packs; campaign-keyed state/Arena; tower height derived from campaign length |
 
 Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its own entry in `ROADMAP.md` §8 — what changed, why, and the exact verification performed. Read the specific ticket's note before touching adjacent code; several tickets left deliberate, documented gaps (see §7 below) that the *next* person shouldn't accidentally "fix" without realizing why they were left alone.
 
-**Next up: T9 — Content architecture.** Retiring the hardcoded volume-keyed `DATA`/`VERSES`/`TOWERS[volume]` model (four LDS volumes, 25 verses each, hardcoded) for opaque, stable passage IDs and a `Campaign`/`Track` model that can support arbitrary tower heights and, eventually, a second (Christian) content track. Read `ROADMAP.md` §3 (`Content architecture`) in full before starting — it's a data-model change, not a screen.
+**Next up: T10 — Doctrinal Mastery + Retired + Articles of Faith + key phrases.** T9 deliberately preserved the existing 100 as a clearly named retired pack; do not mistake them for the current Doctrinal Mastery set. T10 must transcribe the official current references and key scripture phrases from the source named in `ROADMAP.md` §3.3, make current Doctrinal Mastery the Seminary default, keep the retired pack warmly framed, add phrase↔reference drills, and build track-selection onboarding (§3.6).
 
 ## 6 · Conventions a new agent must respect
 
@@ -80,6 +82,7 @@ Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its
 - **T7's `finishArenaSession()` idempotency fix was defensive, not a fix for a live bug.** Both real call sites already guarded against double-invocation; the `sessionId`/`rewarded` fields were added because the ticket asked for them and because relying on a single `done` flag with other jobs was fragile, not because anything was observed to actually double-pay.
 - **Practice XP on a failing Recall Check attempt was deliberately *not* built** in T6, even though the ticket text mentions it — `state.dailyRewards` (T7) didn't exist yet when T6 shipped, and paying XP on every free, unlimited retry would have been exactly the kind of farm T7 was about to close. Revisit this once T7's ledger is stable if it's still wanted.
 - **Text sourcing is done, but not exhaustively human-reviewed.** All 100 shipped passages now carry verification metadata (`data/text-sources.js`) and match the current LDS edition — 79 were checked via an automated text fetch, 21 via direct DOM reads after the fetch was caught silently normalizing curly quotes to straight ones (see T4b/T4c's notes for the full story). That distinction is recorded in each entry's `by` field. Treat "verified" as strong but not infallible; a human spot-check before a paid launch is still worth doing.
+- **T9 parameterized tower height; T11 still owns the custom-tower extremes.** The pure geometry is covered at 3/7/25/60/120 floors and the current 25-floor campaigns render dynamically. Do not quietly fold custom passage editing, sub-four-floor art treatment, or the compressed 120+ floor view into T10; those are T11 scope, including its XSS requirement.
 
 ## 8 · If you're a human handing this to an AI agent
 

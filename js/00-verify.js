@@ -88,7 +88,7 @@ function isVerifiedText(v){ return verificationFor(v).state === "verified"; }
    wants to know how far the sourcing work has actually got. */
 function verificationSummary(list){
   const out = {verified:0, drifted:0, unverified:0, total:0};
-  (list || (typeof VERSES !== "undefined" ? VERSES : [])).forEach(v=>{
+  (list || (typeof allPassages === "function" ? allPassages() : [])).forEach(v=>{
     out[verificationFor(v).state]++; out.total++;
   });
   return out;
@@ -96,7 +96,7 @@ function verificationSummary(list){
 
 /* Regenerating data/text-sources.js by hand is error-prone, so this prints a
    ready-to-paste record for a passage you have just checked. Run it from the
-   console: sourceRecordFor(VERSES.find(v=>v.ref==="1 Nephi 3:7"), "1920 Book of Mormon", "your name") */
+   console: sourceRecordFor(allPassages().find(v=>v.ref==="1 Nephi 3:7"), "Current LDS edition", "your name") */
 function sourceRecordFor(v, source, by){
   return `  ${JSON.stringify(v.ref)}: {hash:${JSON.stringify(textHash(v.text))}, `
        + `source:${JSON.stringify(source || "")}, `

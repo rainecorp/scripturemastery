@@ -422,22 +422,25 @@ One codebase, three surfaces:
   ```
 - Revisit ES modules when the app is served over HTTP (T15).
 
-### 7.2 Layout — as shipped in T2
+### 7.2 Layout — as shipped in T2, updated through T9
 
 Filenames are **numbered, and the numbers are the load order.** They are not decoration: `03-state.js` runs its boot migrations the moment it loads, and `24-boot.js` calls `render()`. Reordering the tags breaks the app. The numbers also preserve the CSS cascade, which the original single `<style>` block gave us for free.
 
 ```
 scripture-tower/
-  index.html               67 lines — <link>s, the six root divs, ordered <script>s
+  index.html               <link>s, root divs, ordered classic <script>s
   css/   01-base 02-towers 03-ceremony 04-pages 05-arena
          06-ui-v2 07-arena-v2 08-responsive
-  data/  passages.js                 the DATA literal (T9 splits it per track)
+  data/  passages.js       registered Seminary content pack: passages,
+                           Campaigns, and Track (T9; T10–T12 add packs)
   js/    00-namespace     SQ = the one global — must load first
          00-config        every tunable number: intervals, ranks, milestones,
                           difficulty bands, the whole Arena table
+         00-content       ★ pure Passage/Campaign/Track contracts + validation
+         00-tower-geometry ★ pure N-floor procedural geometry
          00-tokenize      ★ the canonical tokenizer (T3)
-         01-catalog       VOLUME_ORDER, VERSES build, difficulty tiers
-         02-towers-data   TOWERS, RELICS
+         01-catalog       allPassages/allCampaigns accessors, difficulty tiers
+         02-relics-data   designed relic metadata + fallback mapping
          03-state         climber, STORE_KEY, load/persist/save, migrations, streak
          04-review        seal/re-seal/eternal, REVIEW_LADDER, RANKS
          05-relics        shard rendering, relic popup, chests
@@ -456,10 +459,12 @@ scripture-tower/
          23-proveit  24-boot  25-bridge
   tests/ fingerprint.js   deterministic DOM + computed-style snapshot
          seed-fixture.js  the mid-progress save both runs share
+         seed-fixture.html one-click fixture loader for browser smoke tests
+         content.test.js  opaque IDs, content contracts, areas, tower geometry
   tools/ split-from-baseline.py   how T2 was produced; --verify proves verbatim
 ```
 
-**Files still to come:** `recall.js` (T5) · `learning.js` (T13) · `entitlement.js` (T20) · per-track `data/passages.*` (T9–T12) · `fixtures/`. Tier 00 is "depends on nothing" and is where pure logic goes; new pure modules belong there, not wedged into a numbered slot.
+**Files still to come:** `learning.js` (T13) · `entitlement.js` (T20) · additional content packs (T10–T12) · richer fixtures. Tier 00 is "depends on nothing" and is where pure logic goes; new pure modules belong there, not wedged into a numbered slot.
 
 **One deviation from the pre-split guess, deliberate.** CSS is eight files, not five, because the boundaries had to fall on existing section banners to keep the cascade byte-identical — grouping by theme would have meant reordering rules.
 
@@ -623,8 +628,16 @@ Zero render errors across every tab after the change; 86 recall + 79 tokenize + 
 
 ### Phase C — The right content
 
-**T9 · Content architecture** — §3.2. Retire volume-keyed `DATA` and the hardcoded 25; opaque `p_<hex>` IDs; `campaignAreas()`; `allPassages()`.
+**T9 · Content architecture** — ✅ **DONE** — §3.2. Retire volume-keyed `DATA` and the hardcoded 25; opaque `p_<hex>` IDs; `campaignAreas()`; `allPassages()`.
 **DoD** — tower floor counts derive from campaign length · no hardcoded 25 remains · no ID is derived from a reference or text string.
+
+*Shipped:* The 100 existing retired Scripture Mastery passages now register as a Seminary content pack containing canonical **Passage**, ordered **Campaign**, and **Track** records. Every passage has a generated-once opaque `p_<8 hex>` ID embedded in `data/passages.js`; compiled builtin records and membership arrays are frozen, `allPassages()` is the runtime passage boundary, and no reference/text-to-ID function remains. The four legacy groups are explicitly framed as active retired campaigns so T10 can add current Doctrinal Mastery without confusing the two sets. Designed relic metadata and all 25 WebP filenames were re-keyed to the new stable IDs.
+
+Tower, climb, library, Today, Study, achievements, sharing, ceremony, and Arena consumers now use campaign IDs. `state.progress` is keyed only by passage ID and `state.climb` by campaign ID. Because the app is still in BUILD MODE with no production saves, schema migration 2 intentionally resets pre-T9 reference-keyed progress/climbs rather than preserving the invalid identity contract. A passage placed in multiple campaigns shares one progress record and `recordClimb()` credits every containing campaign. Arena's former Book Mastery path is Campaign Mastery, and `campaignAreas(campaignId)` chunks any campaign into five `ceil(n/5)` areas.
+
+Tower geometry moved to pure `towerGeometry(floors)`, `tvLevelTop`, `tvLevelHeight`, and `tvGlowTop` functions. The renderer derives its layer count, repeat pieces, scroll bounds, floor navigation, completion, and totals from `campaign.passageIds.length`; the only remaining `25`/`24` in that rendering path are legacy source PNG filenames, not height logic. T11 still owns its explicitly-scoped special presentation for sub-four-floor and compressed very-tall custom towers.
+
+*Verification:* `node tests/content.test.js` — **41 passed** (canonical authoring shape; 100 unique opaque IDs; immutable compiled model; invalid legacy IDs rejected; 7/13/25 campaign-area splits; 3/7/25/60/120 tower geometry; relic metadata and assets in lockstep). Existing suites remain green: tokenizer **88**, recall **86**, verification **38**. Every `js/*.js`, `data/*.js`, `tests/*.js`, and `tools/*.js` file passes `node --check`; `tools/text-fetch-plan.js` still maps **100 passages across 87 chapter pages**; `git diff --check` is clean. Live browser smoke covered clean and seeded saves across Today, all four Towers, a 4/25 floor detail (25 layers / 22 repeats / 4 lit), Study with designed relic art, Arena campaign filters and an 8-question campaign-only round, plus 375px mobile with no horizontal overflow. No new console errors or failed relic requests appeared after a cache-busted reload. The app still uses only ordered classic scripts and no build step; the in-app browser's security policy blocks direct `file://` navigation, so this ticket's live smoke ran over the plain static HTTP server rather than claiming a direct-file run it could not perform.
 
 **T10 · Doctrinal Mastery + Retired + Articles of Faith + key phrases**
 Transcribe from source with key scripture phrases. Ship Retired as a warm-framed pack. Key-phrase flashcards both directions (phrase → reference, reference → phrase) — the incumbent's strongest feature and the curriculum's actual center. Track-selection onboarding (§3.6).
@@ -677,9 +690,10 @@ Accounts; **three receipt sources resolving to one entitlement** — StoreKit, G
 
 ```js
 {
-  schemaVersion: 1,
+  schemaVersion: 2,
   track: "seminary",              // seminary | christian | family
-  translation: "lds1920",
+  translation: "lds2013",
+  startingCampaignId: "camp_retired_bom",
   entitlement: { tier: "free", source: null, expiresAt: null },
   xp: 0, streak: 0, bestStreak: 0, lastDay: null, shields: 0,
   calendar: {},

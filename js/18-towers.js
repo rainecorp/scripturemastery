@@ -1,25 +1,23 @@
 /* 18-towers.js
-   towers overview, TV_ASSET geometry, tower visual, tower detail
-   Extracted verbatim from index.html lines 5860-6196 by T2. */
+   campaign overview, scalable tower geometry, tower visual, tower detail */
 /* =========================================================
-   TOWERS — overview + single tower climb
+   CAMPAIGN TOWER RENDERING — each active Campaign is one tower
    ========================================================= */
 function renderTowers(){
-  if(view.volume) return renderTowerDetail(view.volume);
+  if(view.campaignId) return renderTowerDetail(view.campaignId);
   const body = document.getElementById("body");
   body.innerHTML = `
     <div class="tower-grid">
-      ${VOLUME_ORDER.map(vol=>{
-        const t = TOWERS[vol];
-        const s = towerStats(vol);
+      ${activeCampaigns().map(campaign=>{
+        const s = towerStats(campaign.id);
         const segs = 10, filled = Math.round(s.pct*segs);
         return `
-          <div class="tower-card" data-vol="${vol}" style="--thue:${t.hue};--tsoft:${t.soft}">
-            <div class="tc-preview${s.sealed>=s.total?' full':''}"><img src="${t.art.prefix}assembled-preview.png" alt="" loading="lazy"></div>
+          <div class="tower-card" data-campaign="${campaign.id}" style="--thue:${campaign.hue};--tsoft:${campaign.soft}">
+            <div class="tc-preview${s.sealed>=s.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt="" loading="lazy"></div>
             <div class="mini-tower">${Array.from({length:segs},(_,i)=>`<i class="${i<filled?'f':''}"></i>`).join("")}</div>
-            <div class="tc-name">${t.name}</div>
-            <div class="tc-vol">${displayVolumeName(vol)}</div>
-            <div class="tc-tag">${t.tag}</div>
+            <div class="tc-name">${campaign.name}</div>
+            <div class="tc-vol">${campaign.shortName}</div>
+            <div class="tc-tag">${campaign.tag}</div>
             <div class="tc-stats">
               <span class="tc-pill">${s.sealed}/${s.total} sealed</span>
               ${s.eternal?`<span class="tc-pill">♾️ ${s.eternal} eternal</span>`:''}
@@ -28,57 +26,38 @@ function renderTowers(){
           </div>`;
       }).join("")}
     </div>
-    <footer class="hint">Each floor guards one verse and one treasure chest. Seal the verse to open the chest and light the floor.</footer>`;
+    <footer class="hint">Each floor guards one passage and one treasure chest. Seal the passage to open the chest and light the floor.</footer>`;
   body.querySelectorAll(".tower-card").forEach(el=>{
-    el.onclick = ()=>{ view.volume = el.dataset.vol; render(); };
+    el.onclick = ()=>{ view.campaignId = el.dataset.campaign; render(); };
   });
 }
 
 /* =========================================================
-   TOWER VISUAL — the climbable tower art (25 floors, 5 pieces).
-   Each volume has its own kit in temple-towers/ (see TOWERS[vol].art):
-   <prefix>bottom.png (ground), <prefix>window-01.png (floor 1),
-   <prefix>window-repeat.png (floors 2-23), <prefix>top-window-24.png
-   (floor 24), and <prefix>roof-final-25.png (floor 25, the crown).
-   All kits share the same piece geometry (640w · 251/87/94/302).
+   TOWER VISUAL — five art pieces, N floors
+   ---------------------------------------------------------
+   The source PNG filenames still describe the original art positions
+   (roof-final-25 and top-window-24), but those numbers are filenames, not
+   geometry. Campaign passage count is now the only source of tower height.
    ========================================================= */
-const TV_ASSET = { repeatLevels:22, roofHeight:251, topHeight:87, windowHeight:94, baseHeight:302 };
-TV_ASSET.worldHeight = TV_ASSET.roofHeight + TV_ASSET.topHeight
-  + (TV_ASSET.repeatLevels * TV_ASSET.windowHeight) + TV_ASSET.windowHeight + TV_ASSET.baseHeight;
-
-function tvLevelTop(level){
-  const {roofHeight:R, topHeight:T, windowHeight:W, repeatLevels:REP} = TV_ASSET;
-  if(level === 25) return 0;
-  if(level === 24) return R;
-  if(level >= 2) return R + T + ((23 - level) * W);
-  return R + T + (REP * W);
-}
-function tvLevelHeight(level){
-  if(level === 25) return TV_ASSET.roofHeight;
-  if(level === 24) return TV_ASSET.topHeight;
-  return TV_ASSET.windowHeight;
-}
-// Each art piece's window sits at a slightly different offset within its tile —
-// measured directly from the PNGs rather than guessed from tile height.
-function tvGlowTop(level){
-  if(level === 25) return 163;
-  if(level === 1) return 36;
-  if(level === 24) return 32;
-  return 31;
-}
-function tvLevelOffset(viewportEl, scale, level){
+function tvLevelOffset(viewportEl, scale, level, geometry){
+  const g = geometry || towerGeometry(1);
   if(level === 1) return 0;
   const viewportHeight = viewportEl.clientHeight;
   const viewportTarget = viewportHeight * 0.58;
-  const dist = TV_ASSET.worldHeight - (tvLevelTop(level) + tvLevelHeight(level) / 2);
+  const dist = g.worldHeight - (tvLevelTop(level, g) + tvLevelHeight(level, g) / 2);
   const raw = dist - (viewportTarget / scale);
   const minOffset = 0;
-  const maxOffset = (TV_ASSET.worldHeight * scale - viewportHeight) / scale;
+  const maxOffset = Math.max(0, (g.worldHeight * scale - viewportHeight) / scale);
   return Math.max(minOffset, Math.min(maxOffset, raw));
 }
 
-function buildTowerVisual(container, vol){
-  const art = (TOWERS[vol] && TOWERS[vol].art) || {prefix:"temple-towers/restoration-temple-", baseWidth:585};
+function buildTowerVisual(container, campaignId){
+  const campaign = campaignById(campaignId);
+  const geometry = towerGeometry(campaign.passageIds.length);
+  const prefix = towerArtPrefix(campaign);
+  const baseWidth = campaign.towerArt.baseWidth || 640;
+  container._tvGeometry = geometry;
+  container._tvCampaignId = campaignId;
   container.innerHTML = `
     <div class="tv-viewport">
       <div class="tv-caption"><span>Floor</span><strong id="tvCaptionNum">1</strong></div>
@@ -89,35 +68,34 @@ function buildTowerVisual(container, vol){
         <button type="button" class="tv-nav-btn" id="tvDown" title="Climb down">▼</button>
       </div>
       <div class="tv-world" id="tvWorld">
-        <img class="tv-piece" src="${art.prefix}roof-final-25.png" alt="">
-        <img class="tv-piece" src="${art.prefix}top-window-24.png" alt="">
+        <img class="tv-piece" src="${prefix}roof-final-25.png" alt="">
+        <img class="tv-piece" src="${prefix}top-window-24.png" alt="">
         <div id="tvRepeatStack"></div>
-        <img class="tv-piece" src="${art.prefix}window-01.png" alt="">
-        <img class="tv-piece tv-base" src="${art.prefix}bottom.png" alt="" style="width:${art.baseWidth}px">
+        <img class="tv-piece" src="${prefix}window-01.png" alt="">
+        <img class="tv-piece tv-base" src="${prefix}bottom.png" alt="" style="width:${baseWidth}px">
         <div id="tvLevelLayers"></div>
       </div>
     </div>`;
   const repeatStack = container.querySelector("#tvRepeatStack");
-  for(let i=0; i<TV_ASSET.repeatLevels; i++){
+  for(let i=0; i<geometry.repeatLevels; i++){
     const img = document.createElement("img");
     img.className = "tv-piece tv-repeat";
-    img.src = `${art.prefix}window-repeat.png`;
+    img.src = `${prefix}window-repeat.png`;
     img.alt = "";
     repeatStack.appendChild(img);
   }
   const levelLayers = container.querySelector("#tvLevelLayers");
-  for(let level=1; level<=25; level++){
+  for(let level=1; level<=geometry.floors; level++){
     const layer = document.createElement("div");
     layer.className = "tv-layer";
-    layer.style.top = `${tvLevelTop(level)}px`;
-    layer.style.height = `${tvLevelHeight(level)}px`;
+    layer.style.top = `${tvLevelTop(level, geometry)}px`;
+    layer.style.height = `${tvLevelHeight(level, geometry)}px`;
     layer.dataset.level = String(level);
 
     const glow = document.createElement("div");
     glow.className = "tv-glow";
-    glow.style.top = `${tvGlowTop(level)}px`;
-
-    if(level === 25){
+    glow.style.top = `${tvGlowTop(level, geometry)}px`;
+    if(level === geometry.floors){
       glow.style.width = "96px"; glow.style.height = "74px"; glow.style.borderRadius = "18px";
     }
 
@@ -132,14 +110,17 @@ function buildTowerVisual(container, vol){
   }
 }
 
-function updateTowerVisual(container, litCount, activeLevel, vol){
+function updateTowerVisual(container, litCount, activeLevel, campaignId){
   const viewportEl = container.querySelector(".tv-viewport");
   const world = container.querySelector("#tvWorld");
+  const campaign = campaignById(campaignId);
+  const geometry = container._tvGeometry || towerGeometry(campaign.passageIds.length);
   if(!viewportEl || !world) return;
+  activeLevel = Math.max(1, Math.min(geometry.floors, activeLevel));
   const scale = Math.min(0.86, Math.max(0.4, (viewportEl.clientWidth / 640) * 0.94));
   world.style.setProperty("--tv-scale", scale);
-  world.style.setProperty("--tv-y", `${tvLevelOffset(viewportEl, scale, activeLevel)}px`);
-  const log = vol ? climbLog(vol) : [];
+  world.style.setProperty("--tv-y", `${tvLevelOffset(viewportEl, scale, activeLevel, geometry)}px`);
+  const log = climbLog(campaignId);
   container.querySelectorAll(".tv-layer").forEach(layer=>{
     const lvl = Number(layer.dataset.level);
     layer.classList.toggle("is-active", lvl === activeLevel);
@@ -147,7 +128,7 @@ function updateTowerVisual(container, litCount, activeLevel, vol){
     const slot = layer.querySelector(".tv-relic");
     if(slot){
       const id = (lvl <= litCount) ? log[lvl-1] : null;
-      const v = id ? VERSES.find(x=>x.id===id) : null;
+      const v = id ? passageById(id) : null;
       if(v){
         if(layer.dataset.verse !== v.id){
           const r = relicFor(v);
@@ -167,16 +148,16 @@ function updateTowerVisual(container, litCount, activeLevel, vol){
     }
   });
   const info = container.querySelector("#tvFloorInfo");
-  if(info && vol){
+  if(info){
     const fid = log[activeLevel-1];
     let inner;
     if(fid){
-      const fv = VERSES.find(x=>x.id===fid);
+      const fv = passageById(fid);
       const fr = relicFor(fv);
       const fp = state.progress[fv.id];
       inner = `<strong>${fv.ref}</strong><span>${fr.name}${isEternal(fp) ? " ♾️" : (isDue(fp) ? " 🕯️" : " ✦")}</span>`;
     } else if(activeLevel === log.length + 1){
-      inner = `<strong>🗝️ Floor ${activeLevel}</strong><span>Seal a verse to light this window</span>`;
+      inner = `<strong>🗝️ Floor ${activeLevel}</strong><span>Seal a passage to light this window</span>`;
     } else {
       inner = `<strong>🌫️ Floor ${activeLevel}</strong><span>Still hidden in the mist</span>`;
     }
@@ -188,35 +169,35 @@ function updateTowerVisual(container, litCount, activeLevel, vol){
   }
   const cap = container.querySelector("#tvCaptionNum");
   if(cap) cap.textContent = String(activeLevel);
-  container._tvLast = { lit: litCount, active: activeLevel, vol };
+  container._tvLast = {lit:litCount, active:activeLevel, campaignId};
 }
 
 window.addEventListener("resize", ()=>{
   const tv = document.getElementById("towerVisual");
-  if(tv && tv._tvLast) updateTowerVisual(tv, tv._tvLast.lit, tv._tvLast.active, tv._tvLast.vol);
+  if(tv && tv._tvLast) updateTowerVisual(tv, tv._tvLast.lit, tv._tvLast.active, tv._tvLast.campaignId);
 });
 
-function renderTowerDetail(vol){
+function renderTowerDetail(campaignId){
   const body = document.getElementById("body");
-  const t = TOWERS[vol];
-  const vs = versesInVolume(vol);
-  const s = towerStats(vol);
-  const log = climbLog(vol);
+  const campaign = campaignById(campaignId);
+  const passages = campaignPassages(campaignId);
+  const s = towerStats(campaignId);
+  const log = climbLog(campaignId);
+  const floorCount = passages.length;
   const nextFloor = log.length + 1;
-  const complete = log.length >= vs.length;
+  const complete = log.length >= floorCount;
 
-  /* --- next floor: pick your verse, open the next chest --- */
   let nextHTML = "";
   if(!complete){
-    const choices = climbChoices(vol);
+    const choices = climbChoices(campaignId);
     nextHTML = `
-      <div class="next-floor" style="--thue:${t.hue};--tsoft:${t.soft}">
+      <div class="next-floor" style="--thue:${campaign.hue};--tsoft:${campaign.soft}">
         <div class="nf-chest">
           ${chestImg(nextFloor, 92)}
           <div class="nf-chest-label">Chest ${nextFloor}</div>
         </div>
         <div class="nf-body">
-          <div class="nf-title">Floor ${nextFloor} · choose your verse</div>
+          <div class="nf-title">Floor ${nextFloor} · choose your passage</div>
           <div class="nf-sub">Seal any one of these and this chest opens. The climb is yours: every climber's tower is different.</div>
           <div class="choice-grid">
             ${choices.map(c=>{
@@ -229,7 +210,7 @@ function renderTowerDetail(vol){
                   ${relicHTML(c.v, 62)}
                   <div class="cc-info">
                     <div class="cc-ref">${c.v.ref}</div>
-                    <div class="cc-theme">${c.v.theme}</div>
+                    <div class="cc-theme">${c.v.topic}</div>
                     <div class="cc-meta">${d.emoji} ${d.label} · ${d.words} words${started ? ` · ${shardsFor(p)}/5 shards` : ""}</div>
                   </div>
                 </div>`;
@@ -237,14 +218,13 @@ function renderTowerDetail(vol){
           </div>
         </div>
       </div>
-      ${vs.length - log.length > 1 ? `<div class="mist-note">🌫️ ${vs.length - log.length - 1} more chests wait in the mist above.</div>` : ""}`;
+      ${floorCount - log.length > 1 ? `<div class="mist-note">🌫️ ${floorCount - log.length - 1} more chests wait in the mist above.</div>` : ""}`;
   } else {
-    nextHTML = `<div class="crowned">👑 <strong>${t.name} is crowned!</strong><br><span>Every chest opened, every relic claimed. Keep your seals burning to keep it lit.</span></div>`;
+    nextHTML = `<div class="crowned">👑 <strong>${campaign.name} is crowned!</strong><br><span>Every chest opened, every relic claimed. Keep your seals burning to keep it lit.</span></div>`;
   }
 
-  /* --- climbed floors, highest first --- */
   const rows = log.map((id, i)=>{
-    const v = VERSES.find(x=>x.id===id);
+    const v = passageById(id);
     if(!v) return "";
     const p = state.progress[v.id];
     const r = relicFor(v);
@@ -263,10 +243,10 @@ function renderTowerDetail(vol){
   }).reverse().join("");
 
   body.innerHTML = `
-    <div class="tower-head" style="--thue:${t.hue};--tsoft:${t.soft}">
+    <div class="tower-head" style="--thue:${campaign.hue};--tsoft:${campaign.soft}">
       <span class="th-back" id="backTowers">◂ All towers</span>
-      <div class="th-name">${t.icon} ${t.name}</div>
-      <div class="th-vol">${displayVolumeName(vol)} · your climb: ${log.length}/${vs.length} floors</div>
+      <div class="th-name">${campaign.icon} ${campaign.name}</div>
+      <div class="th-vol">${campaign.shortName} · your climb: ${log.length}/${floorCount} floors</div>
       <div class="th-stats">
         <span class="tc-pill">${s.sealed}/${s.total} chests opened</span>
         ${s.eternal?`<span class="tc-pill">♾️ ${s.eternal} eternal</span>`:''}
@@ -277,34 +257,33 @@ function renderTowerDetail(vol){
     <div class="tower-cols">
       <div class="tower-col-main">
         ${nextHTML}
-        ${rows ? `<div class="floors">${rows}</div>` : `<footer class="hint">No floors climbed yet. Pick a verse; sealing it builds Floor 1 of your tower.</footer>`}
-        ${rows ? `<footer class="hint">Your tower is built one memorized verse at a time, in your order. Re-seal before a floor cracks to keep it lit.</footer>` : ""}
+        ${rows ? `<div class="floors">${rows}</div>` : `<footer class="hint">No floors climbed yet. Pick a passage; sealing it builds Floor 1 of your tower.</footer>`}
+        ${rows ? `<footer class="hint">Your tower is built one memorized passage at a time, in your order. Re-seal before a floor cracks to keep it lit.</footer>` : ""}
       </div>
       <div class="tower-col-side">
-        <div class="tower-visual" id="towerVisual" style="--thue:${t.hue};--tsoft:${t.soft}"></div>
+        <div class="tower-visual" id="towerVisual" style="--thue:${campaign.hue};--tsoft:${campaign.soft}"></div>
       </div>
     </div>`;
 
   const towerVisual = document.getElementById("towerVisual");
-  buildTowerVisual(towerVisual, vol);
-  const climbing = (pendingClimb && pendingClimb.vol === vol) ? pendingClimb : null;
+  buildTowerVisual(towerVisual, campaignId);
+  const climbing = (pendingClimb && pendingClimb.campaignId === campaignId) ? pendingClimb : null;
   pendingClimb = null;
   if(climbing){
-    /* arrive one floor below, then ride up as the new window lights */
-    updateTowerVisual(towerVisual, climbing.floor - 1, Math.max(1, climbing.floor - 1), vol);
+    updateTowerVisual(towerVisual, climbing.floor - 1, Math.max(1, climbing.floor - 1), campaignId);
     const climbedId = log[climbing.floor - 1];
-    const climbedV = climbedId ? VERSES.find(x=>x.id===climbedId) : null;
+    const climbedV = climbedId ? passageById(climbedId) : null;
     const ban = document.createElement("div");
     ban.className = "tv-congrats";
     ban.innerHTML = `🎉 <strong>Floor ${climbing.floor} conquered!</strong><br><span>${climbedV ? relicFor(climbedV).name + " now shines in the window." : "The tower grows."}</span>`;
     towerVisual.querySelector(".tv-viewport").appendChild(ban);
     setTimeout(()=>{
-      updateTowerVisual(towerVisual, log.length, Math.min(25, climbing.floor), vol);
+      updateTowerVisual(towerVisual, log.length, Math.min(floorCount, climbing.floor), campaignId);
       ban.classList.add("show");
     }, 750);
     setTimeout(()=>{ ban.classList.remove("show"); }, 7200);
   } else {
-    updateTowerVisual(towerVisual, log.length, complete ? 25 : Math.min(25, nextFloor), vol);
+    updateTowerVisual(towerVisual, log.length, complete ? floorCount : Math.min(floorCount, nextFloor), campaignId);
   }
   towerVisual.querySelectorAll(".tv-layer").forEach(layer=>{
     layer.onclick = ()=>{
@@ -313,20 +292,20 @@ function renderTowerDetail(vol){
     };
   });
   const tvNav = (delta)=>{
-    const cur = towerVisual._tvLast || {active: 1, lit: log.length};
+    const cur = towerVisual._tvLast || {active:1, lit:log.length};
     const target = delta === 0
-      ? (complete ? 25 : Math.min(25, nextFloor))
-      : Math.max(1, Math.min(25, cur.active + delta));
-    updateTowerVisual(towerVisual, cur.lit, target, vol);
+      ? (complete ? floorCount : Math.min(floorCount, nextFloor))
+      : Math.max(1, Math.min(floorCount, cur.active + delta));
+    updateTowerVisual(towerVisual, cur.lit, target, campaignId);
   };
   const tvUp = towerVisual.querySelector("#tvUp");
   const tvDown = towerVisual.querySelector("#tvDown");
   const tvHere = towerVisual.querySelector("#tvHere");
-  if(tvUp) tvUp.onclick = (e)=>{ e.stopPropagation(); tvNav(1); };
-  if(tvDown) tvDown.onclick = (e)=>{ e.stopPropagation(); tvNav(-1); };
-  if(tvHere) tvHere.onclick = (e)=>{ e.stopPropagation(); tvNav(0); };
+  if(tvUp) tvUp.onclick = e=>{ e.stopPropagation(); tvNav(1); };
+  if(tvDown) tvDown.onclick = e=>{ e.stopPropagation(); tvNav(-1); };
+  if(tvHere) tvHere.onclick = e=>{ e.stopPropagation(); tvNav(0); };
 
-  document.getElementById("backTowers").onclick = ()=>{ view.volume = null; render(); };
+  document.getElementById("backTowers").onclick = ()=>{ view.campaignId = null; render(); };
   body.querySelectorAll(".choice-card").forEach(el=>{
     el.onclick = ()=> openStudy(el.dataset.id, false);
   });
@@ -338,12 +317,8 @@ function renderTowerDetail(vol){
   });
 }
 
-/* ---- SQ registry (generated by T2 split; see ROADMAP.md §7) ---- */
+/* ---- SQ registry ---- */
 SQ.renderTowers = renderTowers;
-SQ.TV_ASSET = TV_ASSET;
-SQ.tvLevelTop = tvLevelTop;
-SQ.tvLevelHeight = tvLevelHeight;
-SQ.tvGlowTop = tvGlowTop;
 SQ.tvLevelOffset = tvLevelOffset;
 SQ.buildTowerVisual = buildTowerVisual;
 SQ.updateTowerVisual = updateTowerVisual;

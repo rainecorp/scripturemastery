@@ -60,8 +60,8 @@ function verificationNoteHTML(v){
 
 function renderStudy(){
   const body = document.getElementById("body");
-  if(!view.verseId){ view.verseId = recommendedVerse().id; view.stage = state.progress[view.verseId].stage; }
-  const v = VERSES.find(x=>x.id===view.verseId);
+  if(!view.passageId){ view.passageId = recommendedVerse().id; view.stage = state.progress[view.passageId].stage; }
+  const v = passageById(view.passageId);
   const p = state.progress[v.id];
   const stage = view.stage;
   const diff = difficultyForVerse(v);
@@ -100,7 +100,7 @@ function renderStudy(){
       <div class="study-head">
         <div class="ref">${v.ref}</div>
         ${popularPillHTML(v)}
-        <div class="theme">${v.theme} &nbsp;·&nbsp; ${v.volume}</div>
+        <div class="theme">${v.topic} &nbsp;·&nbsp; ${v.book}</div>
       </div>
       <div class="stage-label">${p.sealed ? '<span class="emoji">🏆</span><span>Sealed ✦</span>' : difficultyLabelForVerse(v)}</div>
       <div class="difficulty-strip">
@@ -224,13 +224,14 @@ function renderStudy(){
   document.getElementById("prevVerse").onclick = ()=> jumpVerse(-1);
   document.getElementById("nextVerse").onclick = ()=> jumpVerse(1);
   function jumpVerse(dir){
-    const idx = VERSES.findIndex(x=>x.id===view.verseId);
-    const next = (idx+dir+VERSES.length)%VERSES.length;
-    view.verseId = VERSES[next].id;
-    view.stage = state.progress[view.verseId].stage;
+    const passages = allPassages();
+    const idx = passages.findIndex(x=>x.id===view.passageId);
+    const next = (idx+dir+passages.length)%passages.length;
+    view.passageId = passages[next].id;
+    view.stage = state.progress[view.passageId].stage;
     view.blanked = new Set(); view.stageFor=null;
     view.editing = false;
-    view.reviewMode = isDue(state.progress[view.verseId]);
+    view.reviewMode = isDue(state.progress[view.passageId]);
     render();
   }
 }

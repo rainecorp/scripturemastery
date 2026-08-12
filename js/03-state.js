@@ -105,12 +105,32 @@ function loadState(){
        number, but a migration should not rely on that alone — check
        before you touch, the same discipline `def()` already uses below.
    ========================================================= */
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MIGRATIONS = [
   {
     to: 1,
     describe: "drop state.edits — read at the old per-verse-edit site, never written since the editing UI was removed",
     run(s){ if("edits" in s) delete s.edits; }
+  },
+  {
+    to: 2,
+    describe: "replace reference-derived verse keys and volume-keyed climbs with opaque passage IDs and campaign IDs",
+    run(s){
+      /* BUILD MODE: there are no production saves to preserve. Carrying the
+         old v_<reference> keys forward would make editable references part of
+         the new identity contract, so this pre-launch content progress is
+         intentionally reset rather than translated into a compatibility shim. */
+      s.progress = {};
+      s.climb = {};
+      s.track = "seminary";
+      s.translation = "lds2013";
+      s.startingCampaignId = "camp_retired_bom";
+      if(s.arena){
+        delete s.arena.filters;
+        delete s.arena.bookMastery;
+        delete s.arena.booksPracticed;
+      }
+    }
   }
 ];
 /* Applies every migration between state's current version and
@@ -199,7 +219,7 @@ function previewProgressImport(json){
   const ids = Object.keys(incoming.progress);
   const sealedIds = ids.filter(id => incoming.progress[id] && incoming.progress[id].sealed);
   const sealedRefs = sealedIds
-    .map(id => { const v = VERSES.find(x=>x.id===id); return v ? v.ref : null; })
+    .map(id => { const v = passageById(id); return v ? v.ref : null; })
     .filter(Boolean);
 
   const summary = {
@@ -437,7 +457,7 @@ function claimReward(key){
 let state = loadState();
 runMigrations(state);
 /* v2 migrations: habit calendar, streak shields, achievements, sharing, sound */
-(function migrateV2(){
+(function fillStateDefaults(){
   let ch = false;
   const def = (k, val)=>{ if(state[k] == null){ state[k] = val; ch = true; } };
   def("calendar", {});
@@ -448,13 +468,19 @@ runMigrations(state);
   def("resealsTotal", 0);
   def("sound", true);
   def("strictMode", false);   // T6: Recall Check QWERTY-adjacent slips. Off = forgiving.
+  def("track", "seminary");
+  def("translation", "lds2013");
+  def("startingCampaignId", "camp_retired_bom");
+  def("collections", []);
+  def("customPassages", []);
+  def("customCampaigns", []);
   if(state.lastDay === todayStr()){
     const iso = localISODate();
     if(!state.calendar[iso]){ state.calendar[iso] = {a:1}; ch = true; }
   }
   if(ch) persistState();
 })();
-VERSES.forEach(v=>{
+allPassages().forEach(v=>{
   if(!state.progress[v.id]) state.progress[v.id] = {stage:0, sealed:false};
 });
 /* migrate old sealed verses into the review system */
@@ -472,31 +498,40 @@ VERSES.forEach(v=>{
 })();
 
 /* =========================================================
-   PERSONAL CLIMB — each tower floor is a verse YOU sealed,
+   PERSONAL CLIMB — each campaign tower floor is a passage YOU sealed,
    in the order you sealed it. Every climber's tower differs.
    ========================================================= */
-function versesInVolumeEarly(vol){ return VERSES.filter(v=>v.volume===vol); }
-(function migrateClimb(){
+function passagesInCampaignEarly(campaignId){ return campaignPassages(campaignId); }
+(function initializeClimbs(){
   if(!state.climb) state.climb = {};
   let changed = false;
-  VOLUME_ORDER.forEach(vol=>{
-    if(!state.climb[vol]){ state.climb[vol] = []; changed = true; }
-    const missing = versesInVolumeEarly(vol)
-      .filter(v=>state.progress[v.id].sealed && !state.climb[vol].includes(v.id))
+  activeCampaigns().forEach(campaign=>{
+    if(!state.climb[campaign.id]){ state.climb[campaign.id] = []; changed = true; }
+    const missing = passagesInCampaignEarly(campaign.id)
+      .filter(v=>state.progress[v.id].sealed && !state.climb[campaign.id].includes(v.id))
       .sort((a,b)=>(state.progress[a.id].sealedAt||0)-(state.progress[b.id].sealedAt||0));
-    missing.forEach(v=>{ state.climb[vol].push(v.id); changed = true; });
+    missing.forEach(v=>{ state.climb[campaign.id].push(v.id); changed = true; });
   });
   if(changed) saveState();
 })();
-function climbLog(vol){ return state.climb[vol] || []; }
-function floorOf(v){ const i = climbLog(v.volume).indexOf(v.id); return i === -1 ? null : i+1; }
-function recordClimb(v){
-  const arr = state.climb[v.volume];
-  if(!arr.includes(v.id)) arr.push(v.id);
-  return arr.indexOf(v.id)+1;
+function climbLog(campaignId){ return state.climb[campaignId] || []; }
+function floorOf(v, campaignId){
+  const campaign = primaryCampaignForPassage(v.id, campaignId);
+  if(!campaign) return null;
+  const i = climbLog(campaign.id).indexOf(v.id);
+  return i === -1 ? null : i + 1;
 }
-function climbChoices(vol){
-  const un = versesInVolume(vol).filter(v=>!state.progress[v.id].sealed);
+function recordClimb(v, preferredCampaignId){
+  const campaigns = campaignsForPassage(v.id);
+  campaigns.forEach(campaign=>{
+    const arr = state.climb[campaign.id] || (state.climb[campaign.id] = []);
+    if(!arr.includes(v.id)) arr.push(v.id);
+  });
+  const campaign = primaryCampaignForPassage(v.id, preferredCampaignId);
+  return campaign ? {campaignId:campaign.id, floor:climbLog(campaign.id).indexOf(v.id)+1} : null;
+}
+function climbChoices(campaignId){
+  const un = campaignPassages(campaignId).filter(v=>!state.progress[v.id].sealed);
   const inProg = un.filter(v=>(state.progress[v.id].stage||0)>0);
   const fresh = un.filter(v=>(state.progress[v.id].stage||0)===0)
     .sort((a,b)=>wordCount(a.text)-wordCount(b.text) || (isPopularVerse(b)?1:0)-(isPopularVerse(a)?1:0));
@@ -571,7 +606,7 @@ SQ.storageUsedBytes = storageUsedBytes;
 SQ.storageReport = storageReport;
 Object.defineProperty(SQ,"storageLastError",{get:()=>storageLastError,set:v=>{storageLastError=v;},enumerable:true,configurable:true});
 Object.defineProperty(SQ,"state",{get:()=>state,set:v=>{state=v;},enumerable:true,configurable:true});
-SQ.versesInVolumeEarly = versesInVolumeEarly;
+SQ.passagesInCampaignEarly = passagesInCampaignEarly;
 SQ.climbLog = climbLog;
 SQ.floorOf = floorOf;
 SQ.recordClimb = recordClimb;

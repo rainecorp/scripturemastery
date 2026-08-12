@@ -1,0 +1,7 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Seed Scripture Quest fixture</title>
+<!-- Browser-test launcher for tests/seed-fixture.js. Same-origin localStorage
+     is populated by the fixture, then the real app is loaded immediately. -->
+<script src="seed-fixture.js"></script>
+<script>location.replace("../index.html?fixture=mid-progress&n=" + Date.now());</script>

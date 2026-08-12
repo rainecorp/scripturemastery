@@ -207,7 +207,7 @@
   }
   nav.tabs button:active{transform:translateY(2px);}
 
-  .volume{
+  .campaign-group{
     margin:0 0 16px;
     padding:12px;
     border-radius:22px;
@@ -215,7 +215,7 @@
     border:1px solid rgba(255,255,255,.55);
     box-shadow:var(--shadow-sm);
   }
-  .volume h2{
+  .campaign-group h2{
     display:flex;
     align-items:center;
     gap:8px;
@@ -227,7 +227,7 @@
     letter-spacing:.09em;
     text-transform:uppercase;
   }
-  .volume h2::before{
+  .campaign-group h2::before{
     content:"✦";
     color:var(--gold-2);
     font-size:14px;
@@ -813,7 +813,7 @@
     .stat{padding-left:5px; padding-right:5px;}
     .stat .n{font-size:18px;}
     .stat .l{font-size:8px; letter-spacing:.05em;}
-    .volume{padding:10px;}
+    .campaign-group{padding:10px;}
     .verse-grid{grid-template-columns:1fr;}
     .card .ref{padding-right:48px;}
     .difficulty-badge{top:10px; right:12px; width:32px; height:32px; font-size:22px;}
@@ -824,5 +824,4 @@
     .controls{grid-template-columns:1fr;}
     button.btn.primary{grid-column:auto;}
   }
-
 

@@ -16,7 +16,7 @@ function shuffleArr(a){
   return x;
 }
 function trialPool(){
-  return VERSES.filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
+  return allPassages().filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
 }
 function trialSnippet(text, words){
   const n = words || 14;
@@ -80,19 +80,24 @@ function setArenaQuestProgress(a, matchFn, value){
 function ensureArena(){
   if(!state.arena) state.arena = {};
   const a = state.arena;
-  a.filters = a.filters || {status:"all", books: VOLUME_ORDER.slice()};
-  if(!a.filters.books || !a.filters.books.length) a.filters.books = VOLUME_ORDER.slice();
+  const campaignIds = activeCampaigns().map(c=>c.id);
+  a.filters = a.filters || {status:"all", campaigns:campaignIds.slice()};
+  if(!a.filters.campaigns || !a.filters.campaigns.length) a.filters.campaigns = campaignIds.slice();
+  a.filters.campaigns = a.filters.campaigns.filter(id=>campaignIds.includes(id));
+  if(!a.filters.campaigns.length) a.filters.campaigns = campaignIds.slice();
   a.difficulty = a.difficulty || "normal";
   a.score = a.score || {total:0, best:0};
   a.streakBest = a.streakBest || 0;
   a.achievements = a.achievements || [];
-  a.booksPracticed = a.booksPracticed || [];
+  a.campaignsPracticed = a.campaignsPracticed || [];
   a.stats = a.stats || {sessions:0, totalAnswered:0, totalCorrect:0, hintsUsed:0, resealedCount:0, byType:{}};
   ARENA_TYPES.forEach(t=>{ if(!a.stats.byType[t]) a.stats.byType[t] = {played:0, correct:0}; });
   ensureArenaQuests(a);
-  a.bookMastery = a.bookMastery || {};
-  VOLUME_ORDER.forEach(vol=>{
-    if(!a.bookMastery[vol] || !a.bookMastery[vol].areas) a.bookMastery[vol] = {areas:[false,false,false,false,false]};
+  a.campaignMastery = a.campaignMastery || {};
+  activeCampaigns().forEach(campaign=>{
+    if(!a.campaignMastery[campaign.id] || !a.campaignMastery[campaign.id].areas){
+      a.campaignMastery[campaign.id] = {areas:new Array(5).fill(false)};
+    }
   });
   a.grand = a.grand || {};
   if(!a.grand.areas || a.grand.areas.length!==10) a.grand.areas = new Array(10).fill(false);
@@ -139,22 +144,26 @@ function spendArenaHeart(T, q, label){
   showToast(`💛 ${label || "Heart hint used"} · ${a.hearts}/${ARENA_HEART_MAX} left`);
   return true;
 }
-function bookAreas(vol){
-  const vs = versesInVolume(vol);
-  const areas = [];
-  for(let i=0;i<5;i++) areas.push(vs.slice(i*5, i*5+5));
-  return areas;
+function campaignAreas(campaignId){
+  const campaign = campaignById(campaignId);
+  if(!campaign) return [[],[],[],[],[]];
+  return campaignAreasFromIds(campaign.passageIds)
+    .map(ids=>ids.map(passageById).filter(Boolean));
 }
 function grandAreas(){
-  const sorted = shuffleArr(VERSES).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
+  const sorted = shuffleArr(allPassages()).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
   const areas = [];
   for(let i=0;i<10;i++) areas.push(sorted.slice(i*10, i*10+10));
   return areas;
 }
 function arenaFilteredPool(){
   const a = ensureArena();
-  return VERSES.filter(v=>{
-    if(!a.filters.books.includes(v.volume)) return false;
+  const passageIds = new Set(a.filters.campaigns.flatMap(id=>{
+    const campaign = campaignById(id);
+    return campaign ? campaign.passageIds : [];
+  }));
+  return allPassages().filter(v=>{
+    if(!passageIds.has(v.id)) return false;
     const p = state.progress[v.id];
     if(a.filters.status==="memorized") return p.sealed;
     if(a.filters.status==="not_yet") return !p.sealed;
@@ -162,12 +171,16 @@ function arenaFilteredPool(){
   });
 }
 function arenaDistractors(v, count){
-  const sameVol = shuffleArr(VERSES.filter(x=>x.id!==v.id && x.volume===v.volume));
-  const rest = shuffleArr(VERSES.filter(x=>x.id!==v.id && x.volume!==v.volume));
-  return sameVol.concat(rest).slice(0, count);
+  const passages = allPassages();
+  const campaign = primaryCampaignForPassage(v.id);
+  const sameCampaignIds = new Set(campaign ? campaign.passageIds : []);
+  const sameCampaign = shuffleArr(passages.filter(x=>x.id!==v.id && sameCampaignIds.has(x.id)));
+  const rest = shuffleArr(passages.filter(x=>x.id!==v.id && !sameCampaignIds.has(x.id)));
+  return sameCampaign.concat(rest).slice(0, count);
 }
 function pickRandomWord(){
-  const v = VERSES[Math.floor(Math.random()*VERSES.length)];
+  const passages = allPassages();
+  const v = passages[Math.floor(Math.random()*passages.length)];
   /* t.core is already the word without its surrounding punctuation, which is
      what the old trailing .replace() was approximating. */
   const words = tokenWords(v.text).filter(t=>t.core.replace(/[^a-zA-Z]/g,"").length>2);
@@ -253,7 +266,7 @@ function buildArenaQuestion(v, type, diffCfg){
   } else if(type==="pairMatch"){
     const trio = [v].concat(arenaDistractors(v, 2));
     q.pairLeft = shuffleArr(trio.map(x=>({id:x.id, label:x.ref})));
-    q.pairRight = shuffleArr(trio.map(x=>({id:x.id, label:x.theme})));
+    q.pairRight = shuffleArr(trio.map(x=>({id:x.id, label:x.topic})));
     q.pairDone = {};
     q.pmMiss = 0;
     q.selL = null;
@@ -263,7 +276,7 @@ function buildArenaQuestion(v, type, diffCfg){
 }
 function poolForMode(mode){
   if(mode.kind==="quick" || mode.kind==="quest" || mode.kind==="blitz") return arenaFilteredPool();
-  if(mode.kind==="book") return bookAreas(mode.vol)[mode.area];
+  if(mode.kind==="campaign") return campaignAreas(mode.campaignId)[mode.area];
   if(mode.kind==="grand") return grandAreas()[mode.area];
   return [];
 }
@@ -273,7 +286,7 @@ function makeArenaRound(mode){
   let rawPool = poolForMode(mode);
   let qs;
   if(mode.kind==="quest"){
-    let pool = rawPool.length ? rawPool : VERSES.slice();
+    let pool = rawPool.length ? rawPool : allPassages();
     if(mode.type==="fullRecitation"){
       const sealedPool = pool.filter(v=>state.progress[v.id].sealed);
       if(sealedPool.length) pool = sealedPool;
@@ -281,7 +294,7 @@ function makeArenaRound(mode){
     pool = shuffleArr(pool).slice(0, Math.min(QUEST_ROUND_LEN[mode.type]||6, pool.length));
     qs = pool.map(v=> buildArenaQuestion(v, mode.type, diffCfg));
   } else if(mode.kind==="blitz"){
-    const pool = rawPool.length >= 3 ? rawPool : VERSES.slice();
+    const pool = rawPool.length >= 3 ? rawPool : allPassages();
     const seq = [];
     while(seq.length < 30) seq.push(...shuffleArr(pool));
     qs = seq.slice(0,30).map((v,i)=> buildArenaQuestion(v, BLITZ_TYPES[i%BLITZ_TYPES.length], diffCfg));
@@ -292,7 +305,7 @@ function makeArenaRound(mode){
   }
   return {
     mode, diffCfg, qs, i:0, correct:0, combo:0, bestCombo:0, score:0,
-    hintsUsed:0, noHintCorrect:0, heartBonus:null, resealed:[], booksTouched:new Set(),
+    hintsUsed:0, noHintCorrect:0, heartBonus:null, resealed:[], campaignsTouched:new Set(),
     /* T7: an explicit identity + reward flag for this one round, so
        finishArenaSession() can refuse to pay out twice for the same
        session even if it were ever called twice -- belt and suspenders
@@ -374,12 +387,12 @@ function finishArenaSession(T){
   a.score.total += T.score;
   a.score.best = Math.max(a.score.best, T.score);
   a.streakBest = Math.max(a.streakBest, T.bestCombo);
-  T.booksTouched.forEach(vol=>{ if(!a.booksPracticed.includes(vol)) a.booksPracticed.push(vol); });
+  T.campaignsTouched.forEach(id=>{ if(!a.campaignsPracticed.includes(id)) a.campaignsPracticed.push(id); });
 
   unlockArenaAchievement(T, "first_session");
   if(T.bestCombo >= 10) unlockArenaAchievement(T, "streak10");
   if(perfect) unlockArenaAchievement(T, "perfect");
-  if(VOLUME_ORDER.every(vol=>a.booksPracticed.includes(vol))) unlockArenaAchievement(T, "all_books");
+  if(activeCampaigns().every(c=>a.campaignsPracticed.includes(c.id))) unlockArenaAchievement(T, "all_books");
 
   a.stats.sessions += 1;
   a.stats.hintsUsed += T.hintsUsed;
@@ -387,12 +400,12 @@ function finishArenaSession(T){
   T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="session", 1));
   if(perfect) T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="perfect", 1));
 
-  if(T.mode.kind==="book"){
+  if(T.mode.kind==="campaign"){
     const complete = perfect;
     if(complete){
-      a.bookMastery[T.mode.vol].areas[T.mode.area] = true;
+      a.campaignMastery[T.mode.campaignId].areas[T.mode.area] = true;
       unlockArenaAchievement(T, "book_area");
-      if(a.bookMastery[T.mode.vol].areas.every(Boolean)) unlockArenaAchievement(T, "book_mastery");
+      if(a.campaignMastery[T.mode.campaignId].areas.every(Boolean)) unlockArenaAchievement(T, "book_mastery");
     }
   } else if(T.mode.kind==="grand"){
     if(perfect){
@@ -400,7 +413,7 @@ function finishArenaSession(T){
       if(a.grand.areas.every(Boolean)) unlockArenaAchievement(T, "grand_mastery");
     }
   }
-  const masteredCount = VERSES.filter(v=>state.progress[v.id].sealed).length;
+  const masteredCount = allPassages().filter(v=>state.progress[v.id].sealed).length;
   if(masteredCount>=25) unlockArenaAchievement(T, "mastered25");
   if(masteredCount>=50) unlockArenaAchievement(T, "mastered50");
   if(masteredCount>=100) unlockArenaAchievement(T, "mastered100");
@@ -420,7 +433,7 @@ function settleAnswer(T, q, correct, opts){
   opts = opts || {};
   q.ok = correct;
   if(q.timerHandle){ clearInterval(q.timerHandle); q.timerHandle=null; }
-  T.booksTouched.add(q.v.volume);
+  campaignsForPassage(q.v.id).forEach(c=>T.campaignsTouched.add(c.id));
   const a = ensureArena();
   a.stats.totalAnswered += 1;
   a.stats.byType[q.type].played += 1;
@@ -500,7 +513,7 @@ SQ.refillArenaHearts = refillArenaHearts;
 SQ.arenaHeartsHTML = arenaHeartsHTML;
 SQ.refreshArenaHeartBanks = refreshArenaHeartBanks;
 SQ.spendArenaHeart = spendArenaHeart;
-SQ.bookAreas = bookAreas;
+SQ.campaignAreas = campaignAreas;
 SQ.grandAreas = grandAreas;
 SQ.arenaFilteredPool = arenaFilteredPool;
 SQ.arenaDistractors = arenaDistractors;
