@@ -65,12 +65,15 @@ const ARENA_DIFF = {
   normal: {key:"normal", label:"Normal", emoji:"🙂", options:3, timer:25, hintFree:false},
   hard:   {key:"hard",   label:"Hard",   emoji:"🥵", options:4, timer:15, hintFree:false}
 };
-const ARENA_TYPES = ["text2ref","ref2text","theme2ref","finishVerse","buildVerse","fillBlank","findError","fullRecitation","timedRecall","wordScramble","pairMatch"];
+const ARENA_TYPES = ["text2ref","ref2text","theme2ref","finishVerse","buildVerse","fillBlank","findError","fullRecitation","timedRecall","wordScramble","pairMatch","refFromText","refFromTheme"];
 const ARENA_TYPE_LABEL = {
   text2ref:"Reference Match", ref2text:"First Words", theme2ref:"Keyword Match",
   finishVerse:"Finish the Verse", buildVerse:"Build the Verse", fillBlank:"Fill in the Blank",
   findError:"Find the Error", fullRecitation:"Full Recitation", timedRecall:"Timed Recall",
-  wordScramble:"Untangle the Verse", pairMatch:"Match the Pairs"
+  wordScramble:"Untangle the Verse", pairMatch:"Match the Pairs",
+  /* T15: producing a reference is recall; picking one from a list (text2ref,
+     theme2ref above) is recognition. Same two cues, typed instead of tapped. */
+  refFromText:"Cite the Reference", refFromTheme:"Name That Reference"
 };
 const ARENA_ACHIEVEMENTS = [
   {id:"first_session",  emoji:"🌱", name:"Scripture Seeker",   desc:"Complete your first Arena session"},
@@ -109,9 +112,17 @@ const ARENA_QUEST_POOL = [
   {id:"onfire",       name:"On Fire",          desc:"Reach a combo streak of 8 in one session",       track:"streak", goal:8, emoji:"🔥", chest:14},
   {id:"untangler",    name:"Thread Weaver",    desc:"Untangle 3 scrambled verses",                    track:"type", type:"wordScramble", goal:3, emoji:"🧵", chest:9},
   {id:"matchmaker",   name:"Pair Matcher",     desc:"Win 3 Match the Pairs rounds",                   track:"type", type:"pairMatch",    goal:3, emoji:"🎴", chest:9},
-  {id:"lightning",    name:"Lightning Legend", desc:"Get 10 correct in one Lightning Round",          track:"blitz", goal:10, emoji:"⚡", chest:19}
+  {id:"lightning",    name:"Lightning Legend", desc:"Get 10 correct in one Lightning Round",          track:"blitz", goal:10, emoji:"⚡", chest:19},
+  {id:"refscribe",    name:"Reference Scribe", desc:"Cite the Reference correctly 5 times",           track:"type", type:"refFromText",  goal:5, emoji:"🖋️", chest:9},
+  {id:"nameit",       name:"Name Namer",       desc:"Name That Reference correctly 5 times",          track:"type", type:"refFromTheme", goal:5, emoji:"🏷️", chest:9}
 ];
 const QUEST_ROUND_LEN = {fullRecitation:3, buildVerse:4, wordScramble:5, pairMatch:4};
+/* T15: expanding intra-session spacing. A missed question's passage is
+   requeued to reappear this many OTHER questions later -- 2, then (if
+   missed again) 5, then (if missed a third time) 9 -- for up to three
+   extra retrieval attempts within the same sitting, the highest-leverage
+   window a session has. See requeueArenaMiss() in js/14-arena.js. */
+const ARENA_REQUEUE_GAPS = [2, 5, 9];
 const BLITZ_TYPES = ["text2ref","ref2text","theme2ref","fillBlank","finishVerse"];
 const BLITZ_SECONDS = 60;
 
@@ -146,6 +157,7 @@ SQ.ARENA_QUEST_POOL = ARENA_QUEST_POOL;
 SQ.QUEST_ROUND_LEN = QUEST_ROUND_LEN;
 SQ.BLITZ_TYPES = BLITZ_TYPES;
 SQ.BLITZ_SECONDS = BLITZ_SECONDS;
+SQ.ARENA_REQUEUE_GAPS = ARENA_REQUEUE_GAPS;
 SQ.SHOW_TEXT_VERIFICATION = SHOW_TEXT_VERIFICATION;
 SQ.DAILY_QUEST_URL = DAILY_QUEST_URL;
 SQ.BRIDGE_KEY = BRIDGE_KEY;

@@ -275,7 +275,32 @@ function buildArenaQuestion(v, type, diffCfg){
     q.selL = null;
   }
   // fullRecitation needs no extra fields — self-reported
+  // refFromText / refFromTheme (T15) need no extra fields either — the
+  // prompt is q.v.text / q.v.topic, already there, and grading compares
+  // typed input straight against q.v.ref via refsMatch() in the view layer.
   return q;
+}
+/* T15: expanding intra-session spacing. Requeues a fresh copy of a missed
+   question so the SAME passage comes back later in THIS session instead of
+   only tomorrow via SM-2 — the first twenty minutes are the highest-leverage
+   review window a session has, and before this the round only ever asked
+   about a passage once. Regenerating via buildArenaQuestion() rather than
+   cloning q means fresh distractors/options each time, not the same wrong
+   answer sitting in the same spot to be memorized by position.
+
+   Skipped for Lightning Round: blitz already repeats passages constantly by
+   cycling its own shuffled pool under a hard time limit, and a session that
+   ends by the clock rather than by exhausting T.qs has no clean place to
+   splice a delayed reappearance into. */
+function requeueArenaMiss(T, q){
+  if(T.mode.kind==="blitz") return;
+  const attempt = q.requeueAttempt || 0;
+  if(attempt >= ARENA_REQUEUE_GAPS.length) return;
+  const gap = ARENA_REQUEUE_GAPS[attempt];
+  const clone = buildArenaQuestion(q.v, q.type, T.diffCfg);
+  clone.requeueAttempt = attempt + 1;
+  const insertAt = Math.min(T.qs.length, T.i + 1 + gap);
+  T.qs.splice(insertAt, 0, clone);
 }
 function poolForMode(mode){
   if(mode.kind==="quick" || mode.kind==="quest" || mode.kind==="blitz") return arenaFilteredPool();
@@ -429,7 +454,8 @@ function finishArenaSession(T){
 }
 function scoreForType(type){
   if(type==="fullRecitation") return 25;
-  if(type==="buildVerse" || type==="timedRecall" || type==="wordScramble" || type==="pairMatch") return 15;
+  if(type==="buildVerse" || type==="timedRecall" || type==="wordScramble" || type==="pairMatch"
+     || type==="refFromText" || type==="refFromTheme") return 15;
   return 10;
 }
 function arenaLearningPositions(q,correct){
@@ -504,6 +530,7 @@ function settleAnswer(T, q, correct, opts){
     }
   } else {
     T.combo = 0;
+    requeueArenaMiss(T, q);
   }
   saveState(); /* persist stats + quest progress per answer, not just at session end */
 }
@@ -554,6 +581,7 @@ SQ.scrambleLeadIn = scrambleLeadIn;
 SQ.buildArenaQuestion = buildArenaQuestion;
 SQ.poolForMode = poolForMode;
 SQ.makeArenaRound = makeArenaRound;
+SQ.requeueArenaMiss = requeueArenaMiss;
 SQ.startQuestRound = startQuestRound;
 SQ.unlockArenaAchievement = unlockArenaAchievement;
 SQ.finishArenaSession = finishArenaSession;

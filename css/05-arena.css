@@ -119,3 +119,17 @@
     color:#9c93c9; font-size:11.5px; font-weight:800; padding:7px 12px; cursor:pointer;
   }
   .hint-btn:hover{color:#cabffa; border-color:rgba(167,139,250,.5);}
+
+  /* T15: typed-reference production (refFromText / refFromTheme) */
+  .ta-ref-form{display:flex; gap:8px; margin-top:4px;}
+  .ta-ref-input{
+    min-width:0; flex:1; padding:13px 14px; border-radius:14px; outline:none;
+    border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.07);
+    color:#f2eefc; font-family:"Cinzel",Georgia,serif; font-size:15px; font-weight:700;
+  }
+  .ta-ref-input:focus{border-color:#a78bfa; box-shadow:0 0 0 3px rgba(167,139,250,.22);}
+  .ta-ref-input:disabled{opacity:.6;}
+  .ta-ref-feedback{margin-top:10px; text-align:center; font-size:13px; font-weight:800;}
+  .ta-ref-feedback .ok{color:#34d399;}
+  .ta-ref-feedback .miss{color:#fca5a5;}
+  .ta-requeue-note{margin:0 0 8px; text-align:center; font-size:11px; font-weight:800; color:#9c93c9;}

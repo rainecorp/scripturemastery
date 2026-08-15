@@ -403,6 +403,7 @@ function renderArenaSession(){
         </div>
         ${isBlitz ? `<div class="ta-timer-wrap blitz-track"><span class="ta-timer-bar" id="blitzTimerBar" style="width:${(blitzLeft/(BLITZ_SECONDS*1000))*100}%; transition:none;"></span></div>` : ""}
         <div class="tc-pill" style="margin-bottom:10px;">${escHTML(modeLabel)} · ${ARENA_TYPE_LABEL[q.type]}</div>
+        ${q.requeueAttempt ? `<div class="ta-requeue-note">↻ One more look — this one slipped a few questions ago.</div>` : ""}
         ${questHudHTML(T)}
         ${arenaHeartsHTML()}
         ${innerHTML}
@@ -839,6 +840,40 @@ function renderArenaSession(){
       if(!q.peekOpen && !spendArenaHeart(T, q, "Scripture words revealed")) return;
       q.peekOpen = !q.peekOpen;
       renderArenaSession();
+    };
+  } else if(q.type==="refFromText" || q.type==="refFromTheme"){
+    /* T15: production, not recognition -- type the reference, don't pick it
+       from a list. Graded with refsMatch() (js/00-refmatch.js), forgiving of
+       spacing/case/dash-style but never two different references. */
+    const prompt = q.type==="refFromText"
+      ? `<div class="tq-kicker">Type the reference for these words</div><div class="tq-text">"${escHTML(trialSnippet(q.v.text,26))}"</div>`
+      : `<div class="tq-kicker">Type the reference that teaches…</div><div class="tq-text">"${escHTML(q.v.topic)}"</div>`;
+    shell(`
+      <div class="tq-card">${prompt}</div>
+      <form class="ta-ref-form" id="taRefForm">
+        <label for="taRefInput" class="sr-only">Scripture reference</label>
+        <input id="taRefInput" class="ta-ref-input" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="e.g. John 3:16">
+        <button class="btn primary" type="submit">Check reference</button>
+      </form>
+      <div class="ta-ref-feedback" id="taRefFeedback"></div>
+    `);
+    const input = document.getElementById("taRefInput");
+    if(input) input.focus();
+    document.getElementById("taRefForm").onsubmit = (e)=>{
+      e.preventDefault();
+      if(T.locked) return;
+      T.locked = true;
+      const typed = input.value;
+      const right = refsMatch(typed, q.v.ref);
+      settleAnswer(T, q, right);
+      input.disabled = true;
+      document.querySelector("#taRefForm button").disabled = true;
+      const fb = document.getElementById("taRefFeedback");
+      if(fb) fb.innerHTML = right
+        ? `<span class="ok">✓ ${escHTML(q.v.ref)}</span>`
+        : `<span class="miss">It was <strong>${escHTML(q.v.ref)}</strong> — you typed "${escHTML(typed)}"</span>`;
+      if(right) flash(document.getElementById("taRefForm"), q.gained); else shake();
+      advance();
     };
   }
 }
