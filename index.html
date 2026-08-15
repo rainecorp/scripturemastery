@@ -4,9 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Line Upon Line — Scripture Quest</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+<meta name="description" content="Memorize, recite, and seal scripture — towers, relics, streaks, and an Arena quiz mode for LDS Seminary and general Christian tracks.">
+<!-- T15b: manifest + theme color + icons, so the app installs to a home
+     screen. Cinzel used to be a hard external <link> to fonts.googleapis.com
+     here; it is now self-hosted (css/00-fonts.css, fonts/) so a cold load
+     has no external dependency at all -- see sw.js for the rest of the
+     offline story. -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b2d42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scripture Quest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/00-fonts.css">
 <link rel="stylesheet" href="css/01-base.css">
 <link rel="stylesheet" href="css/02-towers.css">
 <link rel="stylesheet" href="css/03-ceremony.css">
@@ -33,7 +44,11 @@
      Classic <script> tags, in dependency order. NOT ES modules:
      type="module" is CORS-blocked over file://, and this app must
      keep working when someone unzips it and double-clicks
-     index.html. Revisit when it is served over HTTP (T15).
+     index.html. T15 added a service worker (sw.js) for the HTTP
+     deployment, but file:// is still a fully supported distribution
+     path with no service worker or install prompt available to it —
+     that's expected, not a bug, so this still can't switch to
+     type="module" without breaking it.
 
      The order below is the order this code appeared in the old
      single-file build, and it is load-bearing: 03-state.js runs
@@ -89,5 +104,6 @@
 <script src="js/24-boot.js"></script>
 <script src="js/25-bridge.js"></script>
 <script src="js/26-recall-check.js"></script>
+<script src="js/27-pwa.js"></script>
 </body>
 </html>
