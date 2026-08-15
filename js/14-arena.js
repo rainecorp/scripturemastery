@@ -152,8 +152,9 @@ function campaignAreas(campaignId){
 }
 function grandAreas(){
   const sorted = shuffleArr(allPassages()).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
+  const areaSize = Math.max(1, Math.ceil(sorted.length / 10));
   const areas = [];
-  for(let i=0;i<10;i++) areas.push(sorted.slice(i*10, i*10+10));
+  for(let i=0;i<10;i++) areas.push(sorted.slice(i*areaSize, (i+1)*areaSize));
   return areas;
 }
 function arenaFilteredPool(){

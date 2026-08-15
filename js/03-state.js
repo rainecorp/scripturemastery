@@ -58,6 +58,9 @@ function emitBridge(type, v, xp){
 const STORE_KEY = CLIMBER ? "lineUponLine_v1::" + CLIMBER : "lineUponLine_v1";
 // snapshot before boot writes an empty save (username-gate uses this)
 const HAD_SAVE_AT_BOOT = !!localStorage.getItem("lineUponLine_v1");
+// T10 onboarding must distinguish this profile's existing save from a truly
+// new profile; named climbers use a namespaced STORE_KEY.
+const HAD_PROFILE_SAVE_AT_BOOT = !!localStorage.getItem(STORE_KEY);
 
 function loadState(){
   let raw = null;
@@ -105,7 +108,7 @@ function loadState(){
        number, but a migration should not rely on that alone — check
        before you touch, the same discipline `def()` already uses below.
    ========================================================= */
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const MIGRATIONS = [
   {
     to: 1,
@@ -129,6 +132,17 @@ const MIGRATIONS = [
         delete s.arena.filters;
         delete s.arena.bookMastery;
         delete s.arena.booksPracticed;
+      }
+    }
+  },
+  {
+    to: 3,
+    describe: "make current Doctrinal Mastery the Seminary starting campaign",
+    run(s){
+      if(!s.track || s.track === "seminary"){
+        s.track = "seminary";
+        s.translation = "lds2013";
+        s.startingCampaignId = "camp_dm_bom";
       }
     }
   }
@@ -470,7 +484,9 @@ runMigrations(state);
   def("strictMode", false);   // T6: Recall Check QWERTY-adjacent slips. Off = forgiving.
   def("track", "seminary");
   def("translation", "lds2013");
-  def("startingCampaignId", "camp_retired_bom");
+  def("startingCampaignId", "camp_dm_bom");
+  def("onboardingComplete", HAD_PROFILE_SAVE_AT_BOOT);
+  def("onboardingChoice", HAD_PROFILE_SAVE_AT_BOOT ? "seminary" : null);
   def("collections", []);
   def("customPassages", []);
   def("customCampaigns", []);
@@ -596,6 +612,7 @@ SQ.localISODate = localISODate;
 SQ.emitBridge = emitBridge;
 SQ.STORE_KEY = STORE_KEY;
 SQ.HAD_SAVE_AT_BOOT = HAD_SAVE_AT_BOOT;
+SQ.HAD_PROFILE_SAVE_AT_BOOT = HAD_PROFILE_SAVE_AT_BOOT;
 SQ.loadState = loadState;
 SQ.persistState = persistState;
 SQ.saveState = saveState;

@@ -22,7 +22,7 @@ const ACHIEVEMENTS = [
   {id:"seals_10",   cat:"climb", emoji:"🌄", name:"Above the Mist",     desc:"Seal 10 verses", goal:10, cur:sealedTotal},
   {id:"seals_25",   cat:"climb", emoji:"🏰", name:"Tower Heart",        desc:"Seal 25 verses", goal:25, cur:sealedTotal},
   {id:"seals_50",   cat:"climb", emoji:"⛰️", name:"Summit Seeker",      desc:"Seal 50 verses", goal:50, cur:sealedTotal},
-  {id:"seals_100",  cat:"climb", emoji:"🌟", name:"Keeper of All Words",desc:"Seal all 100 verses", goal:100, cur:sealedTotal},
+  {id:"seals_100",  cat:"climb", emoji:"🌟", name:"Keeper of All Words",desc:"Seal every passage in your collection", goal:allPassages().length, cur:sealedTotal},
   {id:"crowned",    cat:"climb", emoji:"👑", name:"Crowned Tower",      desc:"Complete every floor of one tower", goal:1, cur:hasCrownedCampaign},
   {id:"eternal_1",  cat:"climb", emoji:"♾️", name:"Written on the Heart", desc:"Earn your first Eternal Seal", goal:1, cur:eternalTotal},
   {id:"eternal_5",  cat:"climb", emoji:"💎", name:"Unfading Five",      desc:"Hold 5 Eternal Seals", goal:5, cur:eternalTotal},

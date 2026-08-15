@@ -43,8 +43,8 @@ function pickBlankSet(text, fraction){
 /* ---- text verification note (T4) ----
    Sits directly under the passage, because that is the text the reader is
    about to commit to memory and this is a statement about that text.
-   Deliberately quiet for `unverified` — a caveat, not an error, and it is
-   currently on all 100 passages — and deliberately loud for `drifted`, which
+   Deliberately quiet for `unverified` — a caveat, not an error — and
+   deliberately loud for `drifted`, which
    means a passage was edited after someone reviewed it. */
 function verificationNoteHTML(v){
   if(!SHOW_TEXT_VERIFICATION) return "";
@@ -101,6 +101,7 @@ function renderStudy(){
         <div class="ref">${v.ref}</div>
         ${popularPillHTML(v)}
         <div class="theme">${v.topic} &nbsp;·&nbsp; ${v.book}</div>
+        ${v.keyPhrase ? `<div class="study-key-phrase"><span>Key scripture phrase</span>${escHTML(v.keyPhrase)}</div>` : ""}
       </div>
       <div class="stage-label">${p.sealed ? '<span class="emoji">🏆</span><span>Sealed ✦</span>' : difficultyLabelForVerse(v)}</div>
       <div class="difficulty-strip">

@@ -6,9 +6,13 @@
 function renderTowers(){
   if(view.campaignId) return renderTowerDetail(view.campaignId);
   const body = document.getElementById("body");
-  body.innerHTML = `
-    <div class="tower-grid">
-      ${activeCampaigns().map(campaign=>{
+  const campaigns = activeCampaigns();
+  const groups = [
+    {id:"doctrinal", title:"Current Doctrinal Mastery", desc:"The official current Seminary curriculum—24 passages in each course."},
+    {id:"articles", title:"Articles of Faith", desc:"Thirteen declarations of belief, built as their own climb."},
+    {id:"retired", title:"The Heritage Collection", desc:"The verses a generation grew up on. Still worth carrying."}
+  ];
+  const cardHTML = campaign=>{
         const s = towerStats(campaign.id);
         const segs = 10, filled = Math.round(s.pct*segs);
         return `
@@ -24,8 +28,16 @@ function renderTowers(){
               ${s.due?`<span class="tc-pill warn">🕯️ ${s.due} fading</span>`:''}
             </div>
           </div>`;
-      }).join("")}
-    </div>
+  };
+  body.innerHTML = `
+    ${groups.map(group=>{
+      const members = campaigns.filter(c=>(c.group || "doctrinal") === group.id);
+      if(!members.length) return "";
+      return `<section class="campaign-section ${group.id}">
+        <div class="campaign-section-head"><h2>${group.title}</h2><p>${group.desc}</p></div>
+        <div class="tower-grid">${members.map(cardHTML).join("")}</div>
+      </section>`;
+    }).join("")}
     <footer class="hint">Each floor guards one passage and one treasure chest. Seal the passage to open the chest and light the floor.</footer>`;
   body.querySelectorAll(".tower-card").forEach(el=>{
     el.onclick = ()=>{ view.campaignId = el.dataset.campaign; render(); };

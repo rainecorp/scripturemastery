@@ -1,9 +1,10 @@
 /* 00-content.js — content contracts and pure catalog assembly (T9)
    ===========================================================================
    Content files register immutable packs here before js/01-catalog.js runs.
-   A pack owns passages, campaigns and one track, but those three concepts stay
-   separate in the compiled catalog: passages are canonical content, campaigns
-   are ordered towers of passage IDs, and tracks are ordered campaign sets.
+   A pack contributes passages, campaigns, metadata for shared passages, and
+   optionally a track. Those concepts stay separate in the compiled catalog:
+   passages are canonical content, campaigns are ordered towers of passage
+   IDs, and tracks are ordered campaign sets that may span several packs.
 
    Dependency tier 00: pure data functions, no state and no DOM. Node tests can
    require this file directly.
@@ -84,21 +85,29 @@ function contentCatalogIssues(packs){
       }
     });
 
-    if(!track || !track.id) issues.push(`${label} has no track`);
-    else if(trackIds.has(track.id)) issues.push(`duplicate track ID ${track.id}`);
-    else trackIds.add(track.id);
+    if(track){
+      if(!track.id) issues.push(`${label} has a track with no ID`);
+      else if(trackIds.has(track.id)) issues.push(`duplicate track ID ${track.id}`);
+      else trackIds.add(track.id);
+    }
   });
+
+  if(!trackIds.size) issues.push("catalog has no tracks");
 
   (packs || []).forEach(pack=>{
     (pack.campaigns || []).forEach(c=>{
       (c.passageIds || []).forEach(id=>{
         if(!passageIds.has(id)) issues.push(`${c.id} references missing passage ${id}`);
       });
+      if(c.track && !trackIds.has(c.track)) issues.push(`${c.id} references missing track ${c.track}`);
     });
     const track = pack.track || {};
     (track.campaignIds || []).forEach(id=>{
       if(!campaignIds.has(id)) issues.push(`${track.id || "track"} references missing campaign ${id}`);
       else if(campaignTrack.get(id) !== track.id) issues.push(`${id} belongs to ${campaignTrack.get(id)}, not ${track.id}`);
+    });
+    Object.keys(pack.passageMeta || {}).forEach(id=>{
+      if(!passageIds.has(id)) issues.push(`${pack.id || "content pack"} metadata references missing passage ${id}`);
     });
   });
   return issues;
@@ -108,8 +117,12 @@ function compileContentPacks(packs, verificationRecords){
   const issues = contentCatalogIssues(packs);
   if(issues.length) throw new Error("Invalid content catalog:\n- " + issues.join("\n- "));
 
-  const rawCampaigns = packs.flatMap(pack=>pack.campaigns);
-  const rawTracks = packs.map(pack=>pack.track);
+  const rawCampaigns = packs.flatMap(pack=>pack.campaigns || []);
+  const rawTracks = packs.map(pack=>pack.track).filter(Boolean);
+  const passageMeta = new Map();
+  packs.forEach(pack=>Object.entries(pack.passageMeta || {}).forEach(([id, meta])=>{
+    passageMeta.set(id, {...(passageMeta.get(id) || {}), ...meta});
+  }));
   const placement = new Map();
   rawCampaigns.slice().sort((a,b)=>(a.order||0)-(b.order||0)).forEach(c=>{
     c.passageIds.forEach((id, index)=>{
@@ -125,23 +138,25 @@ function compileContentPacks(packs, verificationRecords){
   const seenPassages = new Set();
   const passages = [];
 
-  packs.forEach(pack=>pack.passages.forEach(raw=>{
+  packs.forEach(pack=>(pack.passages || []).forEach(raw=>{
     if(seenPassages.has(raw.id)) return;
     seenPassages.add(raw.id);
     const track = trackById.get(passageTrack.get(raw.id)) || pack.track;
-    const translation = raw.translation || track.defaultTranslation;
+    const translation = raw.translation || (track && track.defaultTranslation)
+      || pack.defaultTranslation || "lds2013";
     const texts = Object.freeze({...raw.texts});
     const text = texts[translation] || Object.values(texts)[0] || "";
     const rec = (verificationRecords || {})[raw.id] || (verificationRecords || {})[raw.ref] || null;
     const pos = placement.get(raw.id) || {campaignOrder:0, index:passages.length};
+    const meta = passageMeta.get(raw.id) || {};
     passages.push(Object.freeze({
       id: raw.id,
       canon: raw.canon || canonFromReference(raw.ref),
       book: raw.book || bookFromReference(raw.ref),
       ref: raw.ref,
       sortKey: Object.freeze((raw.sortKey || [pos.campaignOrder, pos.index, 0, 0]).slice()),
-      keyPhrase: raw.keyPhrase || null,
-      topic: raw.topic,
+      keyPhrase: meta.keyPhrase || raw.keyPhrase || null,
+      topic: meta.topic || raw.topic,
       texts,
       text,
       textVerifiedAt: rec ? rec.verifiedAt : null,

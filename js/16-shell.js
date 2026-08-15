@@ -4,8 +4,69 @@
 /* =========================================================
    VIEW STATE + SHELL
    ========================================================= */
-let view = {tab:"today", filter:"gettingStarted", campaignId:null, passageId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
+let view = {tab:"today", filter:"gettingStarted", campaignId:null, passageId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, phraseRound:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
 const app = document.getElementById("app");
+
+function chooseOnboardingPath(choice){
+  /* T12 supplies the Christian track and Family/Kids content. Until then the
+     two visible cards are honestly disabled rather than silently routing a
+     learner into Seminary vocabulary they did not choose. */
+  if(choice !== "seminary" && choice !== "explore") return;
+  state.track = "seminary";
+  state.translation = "lds2013";
+  state.startingCampaignId = "camp_dm_bom";
+  state.onboardingChoice = choice;
+  state.onboardingComplete = true;
+  saveState();
+  view.tab = "today";
+  view.campaignId = null;
+  render();
+  window.scrollTo({top:0});
+}
+
+function renderOnboarding(){
+  app.innerHTML = `
+    <main class="path-onboarding">
+      <div class="path-mark">✦ LINE UPON LINE</div>
+      <div class="path-glyph">🗼</div>
+      <h1>Which path are you climbing?</h1>
+      <p class="path-intro">Choose the scripture path you want in front of you first. Progress belongs to each passage, so adding another path later never erases what you have learned.</p>
+      <div class="path-grid">
+        <button class="path-card path-ready" data-path="seminary">
+          <span class="path-icon">🎓</span>
+          <strong>Seminary</strong>
+          <b>Doctrinal Mastery</b>
+          <small>The official current curriculum, key scripture phrases, Articles of Faith, and the heritage Scripture Mastery collection.</small>
+          <em>Begin this path ▸</em>
+        </button>
+        <button class="path-card" disabled aria-disabled="true">
+          <span class="path-icon">✝️</span>
+          <strong>Christian Scripture Memory</strong>
+          <b>Coming in the next content pack</b>
+          <small>Foundations, the Gospel, comfort, Psalms, and family-friendly passages in public-domain translations.</small>
+          <em>Coming soon</em>
+        </button>
+        <button class="path-card" disabled aria-disabled="true">
+          <span class="path-icon">🏡</span>
+          <strong>Family / Kids</strong>
+          <b>Coming with family content</b>
+          <small>A gentler shared path designed for children and family practice.</small>
+          <em>Coming soon</em>
+        </button>
+        <button class="path-card path-ready path-explore" data-path="explore">
+          <span class="path-icon">🧭</span>
+          <strong>Just show me around</strong>
+          <b>Explore before deciding</b>
+          <small>Open the Seminary collection for now and wander through every tower at your own pace.</small>
+          <em>Enter Scripture Quest ▸</em>
+        </button>
+      </div>
+      <div class="path-note">You can add more paths later. Memorizing a shared passage once counts everywhere it appears.</div>
+    </main>`;
+  app.querySelectorAll(".path-ready[data-path]").forEach(button=>{
+    button.onclick = ()=> chooseOnboardingPath(button.dataset.path);
+  });
+}
 
 function nextRankInfo(){
   let curT = 0, curName = RANKS[0][1], nextT = null, nextName = null;
@@ -16,6 +77,7 @@ function nextRankInfo(){
   return {curName, nextT, nextName, pct};
 }
 function render(){
+  if(!state.onboardingComplete){ renderOnboarding(); return; }
   const mastered = allPassages().filter(v=>state.progress[v.id] && state.progress[v.id].sealed).length;
   const due = dueReviews().length;
   const rk = nextRankInfo();
@@ -111,5 +173,7 @@ function bindFilterChips(){
 Object.defineProperty(SQ,"view",{get:()=>view,set:v=>{view=v;},enumerable:true,configurable:true});
 SQ.app = app;
 SQ.nextRankInfo = nextRankInfo;
+SQ.chooseOnboardingPath = chooseOnboardingPath;
+SQ.renderOnboarding = renderOnboarding;
 SQ.render = render;
 SQ.bindFilterChips = bindFilterChips;

@@ -1,0 +1,10 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fresh-install Scripture Quest fixture</title>
+<!-- Browser-test launcher for the true first-run path. It removes only this
+     app's default guest save and consent marker, then opens the real app. -->
+<script>
+localStorage.removeItem("lineUponLine_v1");
+localStorage.removeItem("sq_guestOk");
+location.replace("../index.html?fixture=fresh-install&n=" + Date.now());
+</script>

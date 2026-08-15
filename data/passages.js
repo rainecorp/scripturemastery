@@ -16,7 +16,7 @@ const SEMINARY_CAMPAIGN_CONTENT = [
       subtitle:"Retired Verses of Scripture Mastery",
       towerArt:{kit:"tabernacle-tower", baseWidth:640},
       hue:"#fb923c", soft:"rgba(251,146,60,.22)", icon:"🔥",
-      tag:"Ancient fire, written in stone.", order:4, status:"active"
+      tag:"Ancient fire, written in stone.", order:21, status:"active", group:"retired"
     },
     passages: [
     {
@@ -178,7 +178,7 @@ const SEMINARY_CAMPAIGN_CONTENT = [
       subtitle:"Retired Verses of Scripture Mastery",
       towerArt:{kit:"jerusalem-temple-tower", baseWidth:640},
       hue:"#60a5fa", soft:"rgba(96,165,250,.22)", icon:"🕊️",
-      tag:"Walk where the Master walked.", order:2, status:"active"
+      tag:"Walk where the Master walked.", order:22, status:"active", group:"retired"
     },
     passages: [
     {
@@ -340,7 +340,7 @@ const SEMINARY_CAMPAIGN_CONTENT = [
       subtitle:"Retired Verses of Scripture Mastery",
       towerArt:{kit:"ancient-america-temple", baseWidth:640},
       hue:"#34d399", soft:"rgba(52,211,153,.22)", icon:"🌴",
-      tag:"Hold the rod. Climb to the tree.", order:1, status:"active"
+      tag:"Hold the rod. Climb to the tree.", order:23, status:"active", group:"retired"
     },
     passages: [
     {
@@ -502,7 +502,7 @@ const SEMINARY_CAMPAIGN_CONTENT = [
       subtitle:"Retired Verses of Scripture Mastery",
       towerArt:{kit:"restoration-temple", baseWidth:585},
       hue:"#f4b942", soft:"rgba(244,185,66,.22)", icon:"🗝️",
-      tag:"Line upon line, key by key.", order:3, status:"active"
+      tag:"Line upon line, key by key.", order:24, status:"active", group:"retired"
     },
     passages: [
       {
@@ -663,17 +663,9 @@ const SEMINARY_CAMPAIGNS = SEMINARY_CAMPAIGN_CONTENT.map(group=>({
   ...group.campaign,
   passageIds: group.passages.map(p=>p.id)
 }));
-const SEMINARY_TRACK = {
-  id:"seminary",
-  name:"Seminary — Scripture Mastery",
-  campaignIds:["camp_retired_bom","camp_retired_nt","camp_retired_dc","camp_retired_ot"],
-  defaultTranslation:"lds2013",
-  extraPacks:[]
-};
-
 SQ.registerContentPack({
   id:"seminary-retired-scripture-mastery",
-  track:SEMINARY_TRACK,
+  defaultTranslation:"lds2013",
   campaigns:SEMINARY_CAMPAIGNS,
   passages:SEMINARY_CAMPAIGN_CONTENT.flatMap(group=>group.passages)
 });

@@ -95,14 +95,15 @@ eq(tokenWords("Joseph Smith—History 1:15–20").map(t=>t.core),
 eq(tokenWords("Joseph Smith—History")[1].norm, "smithhistory", "internal em dash drops out of norm");
 
 /* --------------------------------------------------- the real passage set -- */
-section("all 100 shipped passages");
+section("all 158 shipped passages");
 
 const {registerContentPack, registeredContentPacks, compileContentPacks} = require("../js/00-content.js");
 global.SQ = {registerContentPack}; global.window = { SQ: global.SQ };
-eval(fs.readFileSync(path.join(__dirname, "..", "data", "passages.js"), "utf8"));
+["passages.js","articles-of-faith.js","doctrinal-mastery.js"].forEach(file=>
+  eval(fs.readFileSync(path.join(__dirname,"..","data",file),"utf8")));
 const ALL = compileContentPacks(registeredContentPacks(), {}).passages;
 
-eq(ALL.length, 100, "100 passages loaded");
+eq(ALL.length, 158, "158 passages loaded");
 
 /* every passage round-trips */
 {
@@ -119,7 +120,7 @@ eq(ALL.length, 100, "100 passages loaded");
   const countHelper = v => wordCount(v.text);
   const disagree = ALL.filter(v => !(studyIndex(v) === arenaIndex(v) && arenaIndex(v) === countHelper(v)))
                       .map(v => v.ref);
-  eq(disagree, [], "study index === arena index === wordCount, for all 100 passages");
+  eq(disagree, [], "study index === arena index === wordCount, for all 158 passages");
 }
 
 /* Free-standing punctuation is not a word.
@@ -163,7 +164,7 @@ section("free-standing punctuation is not a word");
 /* Corpus invariant, and a regression guard for the T4 corrections: a spaced
    dash in a passage means someone has reintroduced the transcription defect.
    If a future custom passage legitimately needs one, the tokenizer handles it
-   — this guards the shipped 100, not the tokenizer. */
+   — this guards the shipped catalog, not the tokenizer. */
 {
   const spaced = ALL.filter(v => /\s[—–-]\s/.test(v.text)).map(v => v.ref);
   eq(spaced, [], "no shipped passage contains a spaced dash (T4 corrected all 16)");
@@ -173,11 +174,11 @@ section("free-standing punctuation is not a word");
 }
 
 /* With no stray chunks left, the naive splitter and the tokenizer now agree
-   on all 100 — which is the same fact stated from the other side. */
+   across the catalog — which is the same fact stated from the other side. */
 {
   const disagree = ALL.filter(v => v.text.trim().split(/\s+/).length !== wordCount(v.text))
                       .map(v => v.ref);
-  eq(disagree, [], "naive split and wordCount now agree on all 100 passages");
+  eq(disagree, [], "naive split and wordCount now agree on all 158 passages");
 }
 
 /* indices must be usable as stable keys: same text, same answer, every time */
@@ -242,7 +243,7 @@ eq(spanByWords("a b c", 9, 12), "", "out-of-range span yields empty");
       if(parts.join(" ") !== clean) lost.push(`${v.ref} step=${step}`);
     }
   });
-  eq(lost, [], "spans at several step sizes rejoin to the original text, for all 100 passages");
+  eq(lost, [], "spans at several step sizes rejoin to the original text, for all 158 passages");
 }
 
 /* Every em-dash passage keeps its dash through a span partition.

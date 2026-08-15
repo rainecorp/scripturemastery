@@ -2,7 +2,7 @@
    ===========================================================================
    Builds the fetch plan: one entry per chapter page on
    churchofjesuschrist.org, listing which of our passages live on it and which
-   verses each needs. 100 passages collapse to 87 pages.
+   verses each needs. T10 expands the catalog to 158 unique passages.
 
    The three-step protocol, for whoever repeats this:
      1. node tools/text-fetch-plan.js plan.json
@@ -17,10 +17,11 @@
    =========================================================================== */
 const fs = require("fs");
 const ROOT = "/Users/boss-mode/Documents/scripture mastery/scripture-tower";
-let CONTENT_PACK = null;
-const SQ = {registerContentPack(pack){ CONTENT_PACK = pack; }};
-eval(fs.readFileSync(ROOT + "/data/passages.js", "utf8"));
-if(!CONTENT_PACK) throw new Error("Seminary content pack did not register.");
+const CONTENT_PACKS = [];
+const SQ = {registerContentPack(pack){ CONTENT_PACKS.push(pack); }};
+["passages.js","articles-of-faith.js","doctrinal-mastery.js"].forEach(file=>
+  eval(fs.readFileSync(ROOT + "/data/" + file, "utf8")));
+if(!CONTENT_PACKS.length) throw new Error("Seminary content packs did not register.");
 
 const OT = {
   "Genesis":"gen","Exodus":"ex","Leviticus":"lev","Numbers":"num","Deuteronomy":"deut",
@@ -80,13 +81,16 @@ function parseRef(ref){
 
 const byUrl = new Map();
 const unmapped = [];
-CONTENT_PACK.passages.forEach(v=>{
+const seen = new Set();
+CONTENT_PACKS.flatMap(pack=>pack.passages || []).forEach(v=>{
+  if(seen.has(v.id)) return;
+  seen.add(v.id);
   const p = parseRef(v.ref);
   if(!p){ unmapped.push(v.ref + "  (unparsed)"); return; }
   const url = urlFor(p.book, p.ch);
   if(!url){ unmapped.push(v.ref + "  (no slug for book: " + p.book + ")"); return; }
   if(!byUrl.has(url)) byUrl.set(url, []);
-  byUrl.get(url).push({ref:v.ref, verses:p.verses, text:v.text});
+  byUrl.get(url).push({ref:v.ref, verses:p.verses, text:Object.values(v.texts || {})[0] || ""});
 });
 
 const plan = [...byUrl.entries()].map(([url, refs])=>({url, refs}));

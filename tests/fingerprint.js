@@ -65,10 +65,9 @@
   // ---- main tabs ----------------------------------------------------------
   snap("today",        ()=>{ view.tab="today";  view.campaignId=null; render(); });
   snap("towers",       ()=>{ view.tab="towers"; view.campaignId=null; render(); });
-  snap("tower.bom",    ()=>{ view.tab="towers"; view.campaignId="camp_retired_bom"; render(); });
-  snap("tower.nt",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_nt"; render(); });
-  snap("tower.dc",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_dc"; render(); });
-  snap("tower.ot",     ()=>{ view.tab="towers"; view.campaignId="camp_retired_ot"; render(); });
+  activeCampaigns().forEach(c=>{
+    snap("tower."+c.id, ()=>{ view.tab="towers"; view.campaignId=c.id; render(); });
+  });
   snap("shelf",        ()=>{ view.tab="shelf";  view.campaignId=null; render(); });
 
   // ---- collection, every filter ------------------------------------------
@@ -103,6 +102,17 @@
   snap("arena.setup.badges",   ()=>{ view.tab="trials"; view.arenaStatsOpen=false; view.arenaBadgesOpen=true; render(); });
   view.arenaBadgesOpen=false;
 
+  ["phraseToRef","refToPhrase"].forEach(direction=>{
+    snap("arena.phrase."+direction, ()=>{
+      seed = 192837465;
+      view.tab="trials"; view.trialRound=null; view.phraseRound=makePhraseRound(direction); render();
+    });
+    snap("arena.phrase."+direction+".revealed", ()=>{
+      view.phraseRound.revealed=true; render();
+    });
+  });
+  view.phraseRound=null;
+
   // one question of every type, rendered in a live session
   ARENA_TYPES.forEach(type=>{
     snap("arena.q."+type, ()=>{
@@ -118,7 +128,7 @@
     seed = 55555;
     const T = makeArenaRound({kind:"quick", label:"Quick"});
     T.done = true; T.correct = 5; T.score = 420; T.bestCombo = 4;
-    T.campaignsTouched = new Set(["camp_retired_bom"]);
+    T.campaignsTouched = new Set(["camp_dm_bom"]);
     view.tab="trials"; view.trialRound = T; render();
   });
   view.trialRound = null;
@@ -183,9 +193,12 @@
     [".legend-row",".legend-pill",".filter-chip","#body"]);
   probe("study",  ()=>{ view.tab="study"; view.passageId=V("1 Nephi 3:7").id; view.stage=1;
                         view.blanked=new Set(); render(); },
-    ["#body",".w",".btn",".btn.primary"]);
+    ["#body",".study-key-phrase",".w",".btn",".btn.primary"]);
   probe("arena",  ()=>{ view.tab="trials"; view.trialRound=null; render(); },
     [".arena-setup",".mode-grid",".btn.primary","#body"]);
+  probe("phrases",()=>{ seed=564738291; view.tab="trials"; view.phraseRound=makePhraseRound("refToPhrase"); render(); },
+    [".phrase-drill",".phrase-card-main",".phrase-prompt",".btn.primary"]);
+  view.phraseRound=null;
   probe("overlays", ()=>{ openAchvPop(); openRelicPop(V("1 Nephi 3:7")); },
     ["#achvPop",".relic-pop-stage","#relicPop",".cer"]);
   try { closeRelicPop(); } catch(e){}
@@ -201,6 +214,6 @@
 
   Math.random = realRandom;
   if(typeof realStorageUsed === "function") window.storageUsedBytes = realStorageUsed;
-  view.tab = "today"; view.campaignId = null; view.trialRound = null;
+  view.tab = "today"; view.campaignId = null; view.trialRound = null; view.phraseRound = null;
   return JSON.stringify(out, Object.keys(out).sort(), 1);
 })();

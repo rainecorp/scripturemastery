@@ -28,9 +28,13 @@
        passage needs re-checking; that is the entire point of the mechanism.
      - Re-verifying? Replace hash, verifiedAt and by together.
 
-   CURRENT STATE: all 100 passages recorded, 21 of them checked against the
-   chapter page's own rendered text and the remaining 79 against a text fetch
-   of the same page. The distinction is in each entry's "by" field and it
+   CURRENT STATE: this base record covers all 100 heritage passages. T10's
+   generated data/text-sources-t10.js adds provenance for the 58 newly added
+   current Doctrinal Mastery and Articles of Faith passages; 51 current
+   Doctrinal Mastery passages reuse heritage text already recorded here.
+   Of these 100 entries, 21 were checked against the chapter page's own
+   rendered text and the remaining 79 against a text fetch of the same page.
+   The distinction is in each entry's "by" field and it
    matters: the fetch is mediated by a summarizing model, which was caught
    silently normalizing curly apostrophes to straight ones. Every passage
    whose text contains an apostrophe or a quotation mark was therefore

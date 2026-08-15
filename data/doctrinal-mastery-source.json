@@ -1,0 +1,410 @@
+{
+  "source": "https://www.churchofjesuschrist.org/study/manual/doctrinal-mastery-core-document-2023/doctrinal-mastery-passages-and-key-phrases?lang=eng",
+  "retrievedAt": "2026-08-14",
+  "courses": [
+    {
+      "id": "ot",
+      "passages": [
+        {
+          "ref": "Moses 1:39",
+          "keyPhrase": "“This is my work and my glory—to bring to pass the immortality and eternal life of man.”"
+        },
+        {
+          "ref": "Moses 7:18",
+          "keyPhrase": "“The Lord called his people Zion, because they were of one heart and one mind.”"
+        },
+        {
+          "ref": "Abraham 2:9–11",
+          "keyPhrase": "The Lord promised Abraham that his seed would “bear this ministry and Priesthood unto all nations.”"
+        },
+        {
+          "ref": "Abraham 3:22–23",
+          "keyPhrase": "As spirits we “were organized before the world was.”"
+        },
+        {
+          "ref": "Genesis 1:26–27",
+          "keyPhrase": "“God created man in his own image.”"
+        },
+        {
+          "ref": "Genesis 2:24",
+          "keyPhrase": "“A man … shall cleave unto his wife: and they shall be one.”"
+        },
+        {
+          "ref": "Genesis 39:9",
+          "keyPhrase": "“How then can I do this great wickedness, and sin against God?”"
+        },
+        {
+          "ref": "Exodus 20:3–17",
+          "keyPhrase": "The Ten Commandments"
+        },
+        {
+          "ref": "Joshua 24:15",
+          "keyPhrase": "“Choose you this day whom ye will serve.”"
+        },
+        {
+          "ref": "Psalm 24:3–4",
+          "keyPhrase": "“Who shall stand in his holy place? He that hath clean hands, and a pure heart.”"
+        },
+        {
+          "ref": "Proverbs 3:5–6",
+          "keyPhrase": "“Trust in the Lord with all thine heart … and he shall direct thy paths.”"
+        },
+        {
+          "ref": "Isaiah 1:18",
+          "keyPhrase": "“Though your sins be as scarlet, they shall be as white as snow.”"
+        },
+        {
+          "ref": "Isaiah 5:20",
+          "keyPhrase": "“Woe unto them that call evil good, and good evil.”"
+        },
+        {
+          "ref": "Isaiah 29:13–14",
+          "keyPhrase": "The restoration of the gospel is “a marvellous work and a wonder.”"
+        },
+        {
+          "ref": "Isaiah 53:3–5",
+          "keyPhrase": "“Surely [Jesus Christ] hath borne our griefs, and carried our sorrows.”"
+        },
+        {
+          "ref": "Isaiah 58:6–7",
+          "keyPhrase": "The blessings of a proper fast"
+        },
+        {
+          "ref": "Isaiah 58:13–14",
+          "keyPhrase": "“Turn away … from doing thy pleasure on my holy day; and call the sabbath a delight.”"
+        },
+        {
+          "ref": "Jeremiah 1:4–5",
+          "keyPhrase": "“Before I formed thee in the belly … I ordained thee a prophet unto the nations.”"
+        },
+        {
+          "ref": "Ezekiel 3:16–17",
+          "keyPhrase": "The prophet is “a watchman unto the house of Israel.”"
+        },
+        {
+          "ref": "Ezekiel 37:15–17",
+          "keyPhrase": "The Bible and the Book of Mormon “shall become one in thine hand.”"
+        },
+        {
+          "ref": "Daniel 2:44–45",
+          "keyPhrase": "God shall “set up a kingdom, which shall never be destroyed.”"
+        },
+        {
+          "ref": "Amos 3:7",
+          "keyPhrase": "“The Lord God … revealeth his secret unto his servants the prophets.”"
+        },
+        {
+          "ref": "Malachi 3:8–10",
+          "keyPhrase": "The blessings of paying tithing"
+        },
+        {
+          "ref": "Malachi 4:5–6",
+          "keyPhrase": "Elijah “shall turn … the heart of the children to their fathers.”"
+        }
+      ]
+    },
+    {
+      "id": "nt",
+      "passages": [
+        {
+          "ref": "Matthew 5:14–16",
+          "keyPhrase": "“Let your light so shine before men.”"
+        },
+        {
+          "ref": "Matthew 11:28–30",
+          "keyPhrase": "“Come unto me, all ye that labour and are heavy laden, and I will give you rest.”"
+        },
+        {
+          "ref": "Matthew 16:15–19",
+          "keyPhrase": "Jesus said, “I will give unto thee the keys of the kingdom.”"
+        },
+        {
+          "ref": "Matthew 22:36–39",
+          "keyPhrase": "“Thou shalt love the Lord thy God. … Thou shalt love thy neighbour.”"
+        },
+        {
+          "ref": "Luke 2:10–12",
+          "keyPhrase": "“For unto you is born this day in the city of David a Saviour, which is Christ the Lord.”"
+        },
+        {
+          "ref": "Luke 22:19–20",
+          "keyPhrase": "Jesus Christ commanded, partake of the sacrament “in remembrance of me.”"
+        },
+        {
+          "ref": "Luke 24:36–39",
+          "keyPhrase": "“For a spirit hath not flesh and bones, as ye see me have.”"
+        },
+        {
+          "ref": "John 3:5",
+          "keyPhrase": "“Except a man be born of water and of the Spirit, he cannot enter into the kingdom of God.”"
+        },
+        {
+          "ref": "John 3:16",
+          "keyPhrase": "“For God so loved the world, that he gave his only begotten Son.”"
+        },
+        {
+          "ref": "John 7:17",
+          "keyPhrase": "“If any man will do his will, he shall know of the doctrine.”"
+        },
+        {
+          "ref": "John 17:3",
+          "keyPhrase": "“And this is life eternal, that they might know thee the only true God, and Jesus Christ.”"
+        },
+        {
+          "ref": "1 Corinthians 6:19–20",
+          "keyPhrase": "“Your body is the temple of the Holy Ghost.”"
+        },
+        {
+          "ref": "1 Corinthians 11:11",
+          "keyPhrase": "“Neither is the man without the woman, neither the woman without the man, in the Lord.”"
+        },
+        {
+          "ref": "1 Corinthians 15:20–22",
+          "keyPhrase": "“As in Adam all die, even so in Christ shall all be made alive.”"
+        },
+        {
+          "ref": "1 Corinthians 15:40–42",
+          "keyPhrase": "In the Resurrection, there are three degrees of glory."
+        },
+        {
+          "ref": "Ephesians 1:10",
+          "keyPhrase": "“In the dispensation of the fulness of times he might gather together in one all things in Christ.”"
+        },
+        {
+          "ref": "Ephesians 2:19–20",
+          "keyPhrase": "The Church is “built upon the foundation of the apostles and prophets, Jesus Christ himself being the chief corner stone.”"
+        },
+        {
+          "ref": "2 Thessalonians 2:1–3",
+          "keyPhrase": "“The day of Christ … shall not come, except there come a falling away first.”"
+        },
+        {
+          "ref": "2 Timothy 3:15–17",
+          "keyPhrase": "“The holy scriptures … are able to make thee wise unto salvation.”"
+        },
+        {
+          "ref": "Hebrews 12:9",
+          "keyPhrase": "Heavenly Father is “the Father of spirits.”"
+        },
+        {
+          "ref": "James 1:5–6",
+          "keyPhrase": "“If any of you lack wisdom, let him ask of God.”"
+        },
+        {
+          "ref": "James 2:17–18",
+          "keyPhrase": "“Faith, if it hath not works, is dead.”"
+        },
+        {
+          "ref": "1 Peter 4:6",
+          "keyPhrase": "“The gospel [was] preached also to them that are dead.”"
+        },
+        {
+          "ref": "Revelation 20:12",
+          "keyPhrase": "“And the dead were judged … according to their works.”"
+        }
+      ]
+    },
+    {
+      "id": "bom",
+      "passages": [
+        {
+          "ref": "1 Nephi 3:7",
+          "keyPhrase": "“I will go and do the things which the Lord hath commanded.”"
+        },
+        {
+          "ref": "2 Nephi 2:25",
+          "keyPhrase": "“Adam fell that men might be; and men are, that they might have joy.”"
+        },
+        {
+          "ref": "2 Nephi 2:27",
+          "keyPhrase": "“They are free to choose liberty and eternal life … or … captivity and death.”"
+        },
+        {
+          "ref": "2 Nephi 26:33",
+          "keyPhrase": "“All are alike unto God.”"
+        },
+        {
+          "ref": "2 Nephi 28:30",
+          "keyPhrase": "God “will give unto the children of men line upon line, precept upon precept.”"
+        },
+        {
+          "ref": "2 Nephi 32:3",
+          "keyPhrase": "“Feast upon the words of Christ; for behold, the words of Christ will tell you all things what ye should do.”"
+        },
+        {
+          "ref": "2 Nephi 32:8–9",
+          "keyPhrase": "“Ye must pray always.”"
+        },
+        {
+          "ref": "Mosiah 2:17",
+          "keyPhrase": "“When ye are in the service of your fellow beings ye are only in the service of your God.”"
+        },
+        {
+          "ref": "Mosiah 2:41",
+          "keyPhrase": "“Those that keep the commandments of God … are blessed in all things.”"
+        },
+        {
+          "ref": "Mosiah 3:19",
+          "keyPhrase": "“[Put] off the natural man and [become] a saint through the atonement of Christ the Lord.”"
+        },
+        {
+          "ref": "Mosiah 4:9",
+          "keyPhrase": "“Believe in God; … believe that he has all wisdom.”"
+        },
+        {
+          "ref": "Mosiah 18:8–10",
+          "keyPhrase": "Be “baptized in the name of the Lord, as a witness … that ye have entered into a covenant with him.”"
+        },
+        {
+          "ref": "Alma 7:11–13",
+          "keyPhrase": "“And he shall go forth, suffering pains and afflictions and temptations of every kind.”"
+        },
+        {
+          "ref": "Alma 34:9–10",
+          "keyPhrase": "“There must be an atonement made, … an infinite and eternal sacrifice.”"
+        },
+        {
+          "ref": "Alma 39:9",
+          "keyPhrase": "“Go no more after the lusts of your eyes.”"
+        },
+        {
+          "ref": "Alma 41:10",
+          "keyPhrase": "“Wickedness never was happiness.”"
+        },
+        {
+          "ref": "Helaman 5:12",
+          "keyPhrase": "“It is upon the rock of our Redeemer … that ye must build your foundation.”"
+        },
+        {
+          "ref": "3 Nephi 11:10–11",
+          "keyPhrase": "“I have suffered the will of the Father in all things from the beginning.”"
+        },
+        {
+          "ref": "3 Nephi 12:48",
+          "keyPhrase": "“Be perfect even as I, or your Father who is in heaven is perfect.”"
+        },
+        {
+          "ref": "3 Nephi 27:20",
+          "keyPhrase": "“Come unto me and be baptized … that ye may be sanctified by the reception of the Holy Ghost.”"
+        },
+        {
+          "ref": "Ether 12:6",
+          "keyPhrase": "“Ye receive no witness until after the trial of your faith.”"
+        },
+        {
+          "ref": "Ether 12:27",
+          "keyPhrase": "“If men come unto me … then will I make weak things become strong unto them.”"
+        },
+        {
+          "ref": "Moroni 7:45–48",
+          "keyPhrase": "“Charity is the pure love of Christ.”"
+        },
+        {
+          "ref": "Moroni 10:4–5",
+          "keyPhrase": "“Ask with a sincere heart, with real intent, having faith in Christ … [and] by the power of the Holy Ghost ye may know the truth of all things.”"
+        }
+      ]
+    },
+    {
+      "id": "dc",
+      "passages": [
+        {
+          "ref": "Joseph Smith—History 1:15–20",
+          "keyPhrase": "Joseph Smith “saw two Personages, whose brightness and glory defy all description.”"
+        },
+        {
+          "ref": "D&C 1:30",
+          "keyPhrase": "“The only true and living church.”"
+        },
+        {
+          "ref": "D&C 1:37–38",
+          "keyPhrase": "“Whether by mine own voice or by the voice of my servants, it is the same.”"
+        },
+        {
+          "ref": "D&C 6:36",
+          "keyPhrase": "“Look unto me in every thought; doubt not, fear not.”"
+        },
+        {
+          "ref": "D&C 8:2–3",
+          "keyPhrase": "“I will tell you in your mind and in your heart, by the Holy Ghost.”"
+        },
+        {
+          "ref": "D&C 13:1",
+          "keyPhrase": "The Aaronic Priesthood “holds the keys of the ministering of angels, and of the gospel of repentance, and of baptism.”"
+        },
+        {
+          "ref": "D&C 18:10–11",
+          "keyPhrase": "“The worth of souls is great in the sight of God.”"
+        },
+        {
+          "ref": "D&C 18:15–16",
+          "keyPhrase": "“How great will be your joy if you should bring many souls unto me!”"
+        },
+        {
+          "ref": "D&C 19:16–19",
+          "keyPhrase": "“I, [Jesus Christ], have suffered these things for all.”"
+        },
+        {
+          "ref": "D&C 21:4–6",
+          "keyPhrase": "The prophet’s “word ye shall receive, as if from mine own mouth.”"
+        },
+        {
+          "ref": "D&C 29:10–11",
+          "keyPhrase": "“I will reveal myself from heaven with power and great glory … and dwell in righteousness with men on earth a thousand years.”"
+        },
+        {
+          "ref": "D&C 49:15–17",
+          "keyPhrase": "“Marriage is ordained of God.”"
+        },
+        {
+          "ref": "D&C 58:42–43",
+          "keyPhrase": "“He who has repented of his sins, the same is forgiven.”"
+        },
+        {
+          "ref": "D&C 64:9–11",
+          "keyPhrase": "“Of you it is required to forgive all men.”"
+        },
+        {
+          "ref": "D&C 76:22–24",
+          "keyPhrase": "“By [Jesus Christ] the worlds are and were created.”"
+        },
+        {
+          "ref": "D&C 82:10",
+          "keyPhrase": "“I, the Lord, am bound when ye do what I say.”"
+        },
+        {
+          "ref": "D&C 84:20–22",
+          "keyPhrase": "“In the ordinances thereof, the power of godliness is manifest.”"
+        },
+        {
+          "ref": "D&C 88:118",
+          "keyPhrase": "“Seek learning, even by study and also by faith.”"
+        },
+        {
+          "ref": "D&C 89:18–21",
+          "keyPhrase": "The blessings of the Word of Wisdom"
+        },
+        {
+          "ref": "D&C 107:8",
+          "keyPhrase": "“The Melchizedek Priesthood … has power and authority … to administer in spiritual things.”"
+        },
+        {
+          "ref": "D&C 121:36, 41–42",
+          "keyPhrase": "“The rights of the priesthood … cannot be controlled nor handled only on the principles of righteousness.”"
+        },
+        {
+          "ref": "D&C 130:22–23",
+          "keyPhrase": "“The Father has a body of flesh and bones … ; the Son also; but the Holy Ghost … is a personage of Spirit.”"
+        },
+        {
+          "ref": "D&C 131:1–4",
+          "keyPhrase": "“The new and everlasting covenant of marriage.”"
+        },
+        {
+          "ref": "D&C 135:3",
+          "keyPhrase": "Joseph Smith “brought forth the Book of Mormon, which he translated by the gift and power of God.”"
+        }
+      ]
+    }
+  ]
+}

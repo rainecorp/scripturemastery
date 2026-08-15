@@ -14,7 +14,8 @@
     nextReviewAt: now + offDays*D, provenIt: lvl > 1
   });
   const st = {
-    schemaVersion:2, track:"seminary", translation:"lds2013", startingCampaignId:"camp_retired_bom",
+    schemaVersion:3, track:"seminary", translation:"lds2013", startingCampaignId:"camp_dm_bom",
+    onboardingComplete:true, onboardingChoice:"seminary",
     xp:1240, streak:6, bestStreak:9, lastDay:new Date().toDateString(),
     shields:1, shares:2, resealsTotal:5, sound:true, achv:{unlocked:{}},
     calendar: Object.fromEntries([0,1,2,3,4,5].map(i=>[iso(now - i*D), {a:1,c:1}])),
@@ -31,6 +32,11 @@
       "p_b549f0a6": {stage:3, sealed:false}  // Moses 1:39
     },
     climb: {
+      "camp_dm_bom":["p_05aa9da7","p_de9f74d8","p_4e057f38","p_a0035b2c"],
+      "camp_dm_nt":["p_23b0f988","p_fd2f227d"],
+      "camp_dm_dc":["p_66e12a62"],
+      "camp_dm_ot":[],
+      "camp_aof":[],
       "camp_retired_bom":["p_05aa9da7","p_de9f74d8","p_4e057f38","p_a0035b2c"],
       "camp_retired_nt":["p_fd2f227d","p_23b0f988"],
       "camp_retired_dc":["p_66e12a62"],

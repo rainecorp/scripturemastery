@@ -13,9 +13,8 @@
      drifted    — someone checked this passage once, and the text has changed
                   since. This is the state that matters most: it means an
                   edit slipped in after review. Loud on purpose.
-     unverified — nobody has checked it. The honest default, and the state
-                  all 100 seed passages are in until the sourcing decision
-                  in ROADMAP.md §3.4 is made.
+     unverified — nobody has checked it. The honest default until the sourcing
+                  decision in ROADMAP.md §3.4 is made.
 
    The record of what was checked lives in data/text-sources.js, keyed by
    reference. It is deliberately a separate checked-in file: verification is
