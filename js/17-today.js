@@ -151,7 +151,8 @@ function bindCheckinCard(body){
 }
 function renderToday(){
   const body = document.getElementById("body");
-  const started = allPassages().some(v=>{const p=state.progress[v.id]; return p.sealed || (p.stage||0)>0;});
+  const christian = activeTrack().id === "christian";
+  const started = activePassages().some(v=>{const p=state.progress[v.id]; return p.sealed || (p.stage||0)>0;});
   const due = dueReviews();
   const greet = greetingLine();
   let html = "";
@@ -173,7 +174,7 @@ function renderToday(){
 
   html += checkinCardHTML();
 
-  const keyPhraseCount = phrasePassages(allPassages()).length;
+  const keyPhraseCount = phrasePassages(activePassages()).length;
   if(keyPhraseCount){
     html += `
       <div class="home-card phrase-home">
@@ -320,7 +321,7 @@ function renderToday(){
               <div class="achv-desc">${t.a.desc}</div>
               <div class="achv-bar"><i style="width:${Math.round(t.pct*100)}%"></i></div>
             </div>
-            <div class="achv-prog">${t.cur}/${t.a.goal} ▸</div>
+            <div class="achv-prog">${t.cur}/${t.goal} ▸</div>
           </div>`).join("") + `</div>
           <div class="tt-sub" style="margin:8px 0 0;">Tap an achievement to jump straight to where you earn it.</div>`;
       })()}
@@ -328,9 +329,9 @@ function renderToday(){
     </div>
 
     <div class="home-card">
-      <h3><span class="spark">🗼</span> Current Seminary Paths</h3>
+      <h3><span class="spark">🗼</span> ${christian ? "Christian Scripture Paths" : "Current Seminary Paths"}</h3>
       <div class="tower-strip">
-        ${activeCampaigns().filter(campaign=>["doctrinal","articles"].includes(campaign.group)).map(campaign=>{
+        ${activeCampaigns().filter(campaign=>christian || ["doctrinal","articles"].includes(campaign.group)).map(campaign=>{
           const s = towerStats(campaign.id);
           const safeCampaign = safeCampaignHTML(campaign);
           return `
@@ -344,10 +345,10 @@ function renderToday(){
             </div>`;
         }).join("")}
       </div>
-      <div class="heritage-tease" id="heritageTowers"><strong>📜 The Heritage Collection</strong><br>The verses a generation grew up on. Still worth carrying. Explore all four retired Scripture Mastery towers ▸</div>
+      ${christian ? "" : `<div class="heritage-tease" id="heritageTowers"><strong>📜 The Heritage Collection</strong><br>The verses a generation grew up on. Still worth carrying. Explore all four retired Scripture Mastery towers ▸</div>`}
     </div>`;
 
-  const recent = allPassages().filter(v=>state.progress[v.id].sealed)
+  const recent = activePassages().filter(v=>state.progress[v.id].sealed)
     .sort((a,b)=>(state.progress[b.id].sealedAt||0)-(state.progress[a.id].sealedAt||0))
     .slice(0,6);
   html += `

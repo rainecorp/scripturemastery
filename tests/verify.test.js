@@ -86,6 +86,17 @@ ok("drifted still names the original review",
 eq("record keyed to another ref does not apply",
    verificationFor({ref:"2 Nephi 2:25", text:TEXT}).state, "unverified");
 
+global.TEXT_SOURCES = {
+  "p_12345678:bsb": {hash:textHash("Modern wording"),source:"BSB",verifiedAt:"2026-08-14"},
+  "p_12345678:kjv": {hash:textHash("Ancient wording"),source:"KJV",verifiedAt:"2026-08-14"}
+};
+eq("translation-specific BSB record verifies BSB text",
+  verificationFor({id:"p_12345678",ref:"John 1:1",translation:"bsb",text:"Modern wording"}).state, "verified");
+eq("translation-specific KJV record verifies KJV text",
+  verificationFor({id:"p_12345678",ref:"John 1:1",translation:"kjv",text:"Ancient wording"}).state, "verified");
+eq("one translation cannot vouch for another",
+  verificationFor({id:"p_12345678",ref:"John 1:1",translation:"bsb",text:"Ancient wording"}).state, "drifted");
+
 /* A record whose hash was hand-edited to silence a warning still has to match
    the text; there is no way to assert verification without the real text. */
 global.TEXT_SOURCES = {

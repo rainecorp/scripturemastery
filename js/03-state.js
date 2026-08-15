@@ -500,6 +500,18 @@ runMigrations(state);
   def("customPassages", []);
   def("customCampaigns", []);
   def("entitlement", {tier:"free",source:null,expiresAt:null});
+  const configuredTrack = trackById(state.track) || allTracks()[0];
+  if(configuredTrack && configuredTrack.id !== state.track){ state.track=configuredTrack.id; ch=true; }
+  if(configuredTrack){
+    const translations = translationOptionsForTrack(configuredTrack);
+    const expectedTranslation = translations.length
+      ? (translations.includes(state.translation) ? state.translation : configuredTrack.defaultTranslation)
+      : configuredTrack.defaultTranslation;
+    if(state.translation !== expectedTranslation){ state.translation=expectedTranslation; ch=true; }
+    if(!configuredTrack.campaignIds.includes(state.startingCampaignId)){
+      state.startingCampaignId=configuredTrack.startingCampaignId || configuredTrack.campaignIds[0]; ch=true;
+    }
+  }
   /* customCampaigns is an export/debug convenience, never a second editable
      source of truth. Rebuild it from collections on every boot. */
   const derivedCustomCampaigns = customCampaignsFromCollections(state.collections);

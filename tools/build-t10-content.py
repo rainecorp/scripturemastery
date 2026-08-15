@@ -317,7 +317,7 @@ def write_dm(rows, retired, ids, official_text):
         '  id:"seminary-doctrinal-mastery-2023",',
         '  track:{id:"seminary",name:"Seminary — Doctrinal Mastery",',
         '    campaignIds:["camp_dm_ot","camp_dm_nt","camp_dm_bom","camp_dm_dc","camp_aof","camp_retired_ot","camp_retired_nt","camp_retired_bom","camp_retired_dc"],',
-        '    defaultTranslation:"lds2013",extraPacks:["seminary-articles-of-faith","seminary-retired-scripture-mastery"]},',
+        '    defaultTranslation:"lds2013",startingCampaignId:"camp_dm_bom",extraPacks:["seminary-articles-of-faith","seminary-retired-scripture-mastery"]},',
         "  passages:DOCTRINAL_MASTERY_PASSAGES,",
         "  campaigns:DOCTRINAL_MASTERY_CAMPAIGNS,",
         "  passageMeta:DOCTRINAL_MASTERY_META",

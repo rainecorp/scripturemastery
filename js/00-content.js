@@ -144,11 +144,21 @@ function compileContentPacks(packs, verificationRecords){
     const track = trackById.get(passageTrack.get(raw.id)) || pack.track;
     const translation = raw.translation || (track && track.defaultTranslation)
       || pack.defaultTranslation || "lds2013";
-    const texts = Object.freeze({...raw.texts});
-    const text = texts[translation] || Object.values(texts)[0] || "";
-    const rec = (verificationRecords || {})[raw.id] || (verificationRecords || {})[raw.ref] || null;
-    const pos = placement.get(raw.id) || {campaignOrder:0, index:passages.length};
     const meta = passageMeta.get(raw.id) || {};
+    const texts = Object.freeze({...raw.texts, ...(meta.texts || {})});
+    const text = texts[translation] || Object.values(texts)[0] || "";
+    const textVerification = {};
+    Object.keys(texts).forEach(key=>{
+      const rec = (verificationRecords || {})[`${raw.id}:${key}`]
+        || (verificationRecords || {})[`${raw.ref}:${key}`]
+        || (key === translation
+          ? ((verificationRecords || {})[raw.id] || (verificationRecords || {})[raw.ref])
+          : null);
+      if(rec) textVerification[key] = Object.freeze({...rec});
+    });
+    const rec = textVerification[translation] || null;
+    const pos = placement.get(raw.id) || {campaignOrder:0, index:passages.length};
+    const topics = Object.freeze({...raw.topics, ...(meta.topics || {})});
     passages.push(Object.freeze({
       id: raw.id,
       canon: raw.canon || canonFromReference(raw.ref),
@@ -157,8 +167,11 @@ function compileContentPacks(packs, verificationRecords){
       sortKey: Object.freeze((raw.sortKey || [pos.campaignOrder, pos.index, 0, 0]).slice()),
       keyPhrase: meta.keyPhrase || raw.keyPhrase || null,
       topic: meta.topic || raw.topic,
+      topics,
       texts,
       text,
+      translation,
+      textVerification: Object.freeze(textVerification),
       textVerifiedAt: rec ? rec.verifiedAt : null,
       textHash: rec ? rec.hash : null,
       source: raw.source || "builtin"
@@ -191,6 +204,23 @@ function compileContentPacks(packs, verificationRecords){
   });
 }
 
+function passageInTranslation(passage, translation){
+  if(!passage || passage.source === "user" || !passage.texts) return passage;
+  const key = passage.texts[translation] ? translation : passage.translation;
+  if(!key || passage.translation === key) return passage;
+  const rec = (passage.textVerification || {})[key] || null;
+  return Object.freeze({
+    ...passage,
+    text: passage.texts[key],
+    topic: ["bsb","kjv"].includes(key) && passage.topics && passage.topics.christian
+      ? passage.topics.christian : passage.topic,
+    keyPhrase: ["bsb","kjv"].includes(key) ? null : passage.keyPhrase,
+    translation: key,
+    textVerifiedAt: rec ? rec.verifiedAt : null,
+    textHash: rec ? rec.hash : null
+  });
+}
+
 /* Always returns five areas. For a non-multiple of five, earlier areas fill
    first and the final area may be shorter (or empty for a tiny campaign). */
 function campaignAreasFromIds(passageIds){
@@ -203,7 +233,7 @@ if(typeof module !== "undefined" && module.exports){
   module.exports = {
     isOpaquePassageId, registerContentPack, registeredContentPacks,
     bookFromReference, canonFromReference, contentCatalogIssues,
-    compileContentPacks, campaignAreasFromIds
+    compileContentPacks, passageInTranslation, campaignAreasFromIds
   };
 }
 
@@ -215,5 +245,6 @@ if(typeof SQ !== "undefined"){
   SQ.canonFromReference = canonFromReference;
   SQ.contentCatalogIssues = contentCatalogIssues;
   SQ.compileContentPacks = compileContentPacks;
+  SQ.passageInTranslation = passageInTranslation;
   SQ.campaignAreasFromIds = campaignAreasFromIds;
 }

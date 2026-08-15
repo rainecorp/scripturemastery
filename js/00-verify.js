@@ -58,7 +58,9 @@ function textHash(text){
    right. It is a few hundred characters of FNV; the cost is nothing. */
 function verificationFor(v){
   const hash = textHash(v && v.text);
-  const rec = (typeof TEXT_SOURCES !== "undefined" && v) ? TEXT_SOURCES[v.ref] : null;
+  const rec = (typeof TEXT_SOURCES !== "undefined" && v)
+    ? (TEXT_SOURCES[`${v.id}:${v.translation}`] || TEXT_SOURCES[`${v.ref}:${v.translation}`]
+      || TEXT_SOURCES[v.id] || TEXT_SOURCES[v.ref]) : null;
 
   if(!rec){
     return {

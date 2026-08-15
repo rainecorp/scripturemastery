@@ -19,7 +19,7 @@ function libraryFilters(){
   ];
 }
 function versesForCurrentFilter(){
-  let list = allPassages();
+  let list = activePassages();
   const f = view.filter || "gettingStarted";
   if(f === "gettingStarted"){
     return list

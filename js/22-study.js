@@ -229,7 +229,7 @@ function renderStudy(){
   document.getElementById("prevVerse").onclick = ()=> jumpVerse(-1);
   document.getElementById("nextVerse").onclick = ()=> jumpVerse(1);
   function jumpVerse(dir){
-    const passages = allPassages();
+    const passages = activePassages();
     const idx = passages.findIndex(x=>x.id===view.passageId);
     const next = (idx+dir+passages.length)%passages.length;
     view.passageId = passages[next].id;

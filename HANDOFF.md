@@ -6,7 +6,7 @@
 
 ## 1 · What this is
 
-**Scripture Quest** (in-app title: *Line Upon Line*) is a dependency-free, single-page scripture-memorization game — think Duolingo mechanics (towers, seals, relics, streaks, an Arena quiz mode) applied to LDS Seminary scripture mastery, with a second Christian-track expansion planned. No framework, no build step, no npm dependency in the shipped app. It runs by opening `index.html` — including directly via `file://`, unzipped on someone's desktop, which is a hard constraint on the whole codebase (see §4 below).
+**Scripture Quest** (in-app title: *Line Upon Line*) is a dependency-free, single-page scripture-memorization game — think Duolingo mechanics (towers, seals, relics, streaks, an Arena quiz mode) with complete LDS Seminary and general-Christian Scripture Memory tracks. No framework, no build step, no npm dependency in the shipped app. It runs by opening `index.html` — including directly via `file://`, unzipped on someone's desktop, which is a hard constraint on the whole codebase (see §4 below).
 
 ## 2 · Where it lives
 
@@ -42,7 +42,7 @@ node tests/content.test.js
 node tests/phrases.test.js
 node tests/custom.test.js
 ```
-These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c), content/tower contracts (T9/T10), T10's bidirectional key-phrase cards, and T11's custom-content, escaping, entitlement, and tall-tower contracts. They pass today (**88 + 86 + 38 + 67 + 14 + 30 = 323 assertions**).
+These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c/T12), content/tower/translation contracts (T9/T10/T12), T10's bidirectional key-phrase cards, and T11's custom-content, escaping, entitlement, and tall-tower contracts. They pass today (**89 + 86 + 41 + 94 + 14 + 30 = 354 assertions**).
 
 **What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-custom.js`, `js/00-html.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`, `js/00-phrases.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, onboarding, and campaign UI behavior — is verified in the real browser app with the fixtures. `tests/onboarding-fixture.html` opens a true first run; `tests/seed-fixture.html` opens the schema-current mid-progress state. `tests/custom-fixture.html?floors=7` seeds the exact XSS regression passage and accepts `floors=10`, `60`, or `145` for cap and geometry checks. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
 
@@ -50,7 +50,7 @@ These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verific
 
 ## 5 · Current status
 
-All of **Phase A (Foundations)**, the completed Phase B work through T8, and Phase C through T11 are done, in order:
+All of **Phase A (Foundations)**, the completed Phase B work through T8, and all of Phase C through T12 are done, in order:
 
 | Ticket | What it did |
 |---|---|
@@ -66,10 +66,11 @@ All of **Phase A (Foundations)**, the completed Phase B work through T8, and Pha
 | T9 | Replaced volume-keyed content with opaque passage IDs and Passage/Campaign/Track packs; campaign-keyed state/Arena; tower height derived from campaign length |
 | T10 | Added the official 96-passage current Doctrinal Mastery curriculum (24 per course), 13 Articles of Faith, the preserved 100-passage Heritage Collection, path onboarding, and key-phrase recall in both directions |
 | T11 | Added persistent custom passages and collections, personal towers that grow per passage, one escaping boundary across every user-text renderer, free/paid caps, and tiny/60-floor/120+-floor tower presentation |
+| T12 | Added the complete Christian track: 99 BSB/KJV passages across six 20-floor campaigns, translation/path pickers, seven cross-track shared identities, learner-facing track isolation, and intentional neutral-art/relic fallbacks |
 
 Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its own entry in `ROADMAP.md` §8 — what changed, why, and the exact verification performed. Read the specific ticket's note before touching adjacent code; several tickets left deliberate, documented gaps (see §7 below) that the *next* person shouldn't accidentally "fix" without realizing why they were left alone.
 
-**Next up: T12 — Christian track.** Read T11's shipped note before touching catalog, rendering, or tower code: custom content now travels through the same Passage/Campaign accessors as built-in packs, and `js/00-html.js` is the required rendering boundary. T12 owns BSB + KJV per passage, a translation picker, six starter campaigns, neutral tower-kit reuse with new hues, and a full audit for Seminary-specific language.
+**Next up: T13 — learning events, trouble map, and graded scheduling.** Read T12's shipped note before choosing a passage boundary: `allPassages()` intentionally means the whole persistent catalog, while `activePassages()` is the current learner-facing path in recommendations, reviews, Study, Shelf, achievements, and Arena. T13 owns `recordLearningAttempt()`, bounded event history plus lifetime aggregates, tokenizer-position trouble data, a mutually exclusive Meaning / Trouble spots / Plain control, and an FSRS or SM-2 scheduling engine beneath the existing seal presentation.
 
 ## 6 · Conventions a new agent must respect
 
@@ -85,7 +86,7 @@ Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its
 - **No Settings screen exists yet.** Several things are waiting on it: a UI for `state.strictMode` (T6), the storage-used line living at the foot of Today instead of Settings (T4a), and Export/Import having no button to live behind (T8). Don't build a Settings screen speculatively for one of these — wait until enough of them are ready to justify the screen, or until a ticket explicitly calls for it.
 - **T7's `finishArenaSession()` idempotency fix was defensive, not a fix for a live bug.** Both real call sites already guarded against double-invocation; the `sessionId`/`rewarded` fields were added because the ticket asked for them and because relying on a single `done` flag with other jobs was fragile, not because anything was observed to actually double-pay.
 - **Practice XP on a failing Recall Check attempt was deliberately *not* built** in T6, even though the ticket text mentions it — `state.dailyRewards` (T7) didn't exist yet when T6 shipped, and paying XP on every free, unlimited retry would have been exactly the kind of farm T7 was about to close. Revisit this once T7's ledger is stable if it's still wanted.
-- **Text sourcing is done, but not exhaustively human-reviewed.** All 158 canonical passages carry verification metadata and match the current LDS edition. The heritage 100 live in `data/text-sources.js`: 79 were checked via an automated text fetch and 21 via direct DOM reads after the fetch was caught silently normalizing curly quotes to straight ones. T10's 58 newly authored passages live in generated `data/text-sources-t10.js`; its extractor also byte-checked all 51 current-curriculum references shared with heritage. Treat "verified" as strong but not infallible; a human spot-check before a paid launch is still worth doing.
+- **Text sourcing is done, but not exhaustively human-reviewed.** The catalog contains 250 canonical passages and 356 exact translation texts. All 158 Seminary passages carry verification metadata and match the current LDS edition. The heritage 100 live in `data/text-sources.js`: 79 were checked via an automated text fetch and 21 via direct DOM reads after the fetch was caught silently normalizing curly quotes to straight ones. T10's 58 newly authored passages live in generated `data/text-sources-t10.js`; its extractor also byte-checked all 51 current-curriculum references shared with heritage. T12's 198 BSB/KJV records are generated directly from public-domain API chapter JSON and documented in `data/CHRISTIAN-SOURCES.md`. Treat "verified" as strong but not infallible; a human spot-check before a paid launch is still worth doing.
 - **The dedicated custom tower art kit is still owner-supplied.** T11 ships the complete mechanic with the neutral Restoration asset set, a purple personal-tower hue, and distinct framing. The roadmap's decision table explicitly says the owner will design the final plain “pioneer tower” kit; swap `towerArt.kit` in `customCampaignFromCollection()` when those five matching assets arrive. Do not block T12 or invent bespoke relic art for every custom passage.
 - **The official current Doctrinal Mastery table is 96 passages, not 100.** As retrieved on 2026-08-14 it has exactly 24 in each of four courses. `data/doctrinal-mastery-source.json` is the checked-in reference/phrase snapshot and `tools/build-t10-content.py` is the reproducible extractor. If the official page changes, let its count assertion fail loudly and review the diff—do not pad a course to 25 to fit old expectations.
 

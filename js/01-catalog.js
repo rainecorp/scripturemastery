@@ -11,7 +11,8 @@ const BUILTIN_TRACKS = CONTENT_CATALOG.tracks;
 function allPassages(){
   const custom = (typeof state !== "undefined" && Array.isArray(state.customPassages))
     ? state.customPassages : [];
-  return BUILTIN_PASSAGES.concat(custom);
+  const translation = (typeof state !== "undefined" && state.translation) || null;
+  return BUILTIN_PASSAGES.map(p=>passageInTranslation(p, translation)).concat(custom);
 }
 function allCampaigns(){
   /* Collections are the editable source of truth. Campaigns are derived so a
@@ -33,9 +34,19 @@ function activeCampaigns(trackId){
   if(!track) return [];
   const wanted = new Set(track.campaignIds);
   return allCampaigns()
-    .filter(c=>(wanted.has(c.id) || (c.source === "user" && c.track === track.id))
+    /* Personal towers belong to the learner, not a denomination. They remain
+       available beside whichever built-in path is currently selected. */
+    .filter(c=>(wanted.has(c.id) || c.source === "user")
       && (c.status === "active" || c.status === "custom"))
     .sort((a,b)=>(a.order||0)-(b.order||0));
+}
+function activePassages(){
+  const wanted = new Set(activeCampaigns().flatMap(c=>c.passageIds));
+  return allPassages().filter(p=>p.source === "user" || wanted.has(p.id));
+}
+function translationOptionsForTrack(track){
+  const current = typeof track === "string" ? trackById(track) : (track || activeTrack());
+  return current && Array.isArray(current.translations) ? current.translations.slice() : [];
 }
 function campaignPassages(campaignId){
   const c = campaignById(campaignId);
@@ -100,6 +111,8 @@ SQ.campaignById = campaignById;
 SQ.trackById = trackById;
 SQ.activeTrack = activeTrack;
 SQ.activeCampaigns = activeCampaigns;
+SQ.activePassages = activePassages;
+SQ.translationOptionsForTrack = translationOptionsForTrack;
 SQ.campaignPassages = campaignPassages;
 SQ.campaignsForPassage = campaignsForPassage;
 SQ.primaryCampaignForPassage = primaryCampaignForPassage;

@@ -21,7 +21,7 @@ function currentCampaignFloorIndex(campaignId){
   return i === -1 ? vs.length-1 : i;
 }
 function recommendedVerse(){
-  const passages = allPassages();
+  const passages = activePassages();
   const inProg = passages.find(v=>{const p=state.progress[v.id]; return !p.sealed && (p.stage||0) > 0 && (v.source!=="user"||campaignsForPassage(v.id).length);});
   if(inProg) return inProg;
   const starting = state.startingCampaignId || (activeCampaigns()[0] && activeCampaigns()[0].id);

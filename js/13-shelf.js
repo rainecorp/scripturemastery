@@ -7,8 +7,8 @@
    ========================================================= */
 function renderShelf(){
   const body = document.getElementById("body");
-  const total = allPassages().length;
-  const claimed = allPassages().filter(v=>state.progress[v.id].sealed).length;
+  const total = activePassages().length;
+  const claimed = activePassages().filter(v=>state.progress[v.id].sealed).length;
   let html = `
     <div class="shelf-head">
       <h2>🏺 The Relic Shelf</h2>

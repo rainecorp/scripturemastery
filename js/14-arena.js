@@ -16,7 +16,7 @@ function shuffleArr(a){
   return x;
 }
 function trialPool(){
-  return allPassages().filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
+  return activePassages().filter(v=>{ const p = state.progress[v.id]; return p.sealed || (p.stage||0) > 0; });
 }
 function trialSnippet(text, words){
   const n = words || 14;
@@ -151,7 +151,7 @@ function campaignAreas(campaignId){
     .map(ids=>ids.map(passageById).filter(Boolean));
 }
 function grandAreas(){
-  const sorted = shuffleArr(allPassages()).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
+  const sorted = shuffleArr(activePassages()).sort((a,b)=>difficultyForVerse(a).index - difficultyForVerse(b).index);
   const areaSize = Math.max(1, Math.ceil(sorted.length / 10));
   const areas = [];
   for(let i=0;i<10;i++) areas.push(sorted.slice(i*areaSize, (i+1)*areaSize));
@@ -163,7 +163,7 @@ function arenaFilteredPool(){
     const campaign = campaignById(id);
     return campaign ? campaign.passageIds : [];
   }));
-  return allPassages().filter(v=>{
+  return activePassages().filter(v=>{
     if(!passageIds.has(v.id)) return false;
     const p = state.progress[v.id];
     if(a.filters.status==="memorized") return p.sealed;
@@ -172,7 +172,7 @@ function arenaFilteredPool(){
   });
 }
 function arenaDistractors(v, count){
-  const passages = allPassages();
+  const passages = activePassages();
   const campaign = primaryCampaignForPassage(v.id);
   const sameCampaignIds = new Set(campaign ? campaign.passageIds : []);
   const sameCampaign = shuffleArr(passages.filter(x=>x.id!==v.id && sameCampaignIds.has(x.id)));
@@ -180,7 +180,7 @@ function arenaDistractors(v, count){
   return sameCampaign.concat(rest).slice(0, count);
 }
 function pickRandomWord(){
-  const passages = allPassages();
+  const passages = activePassages();
   const v = passages[Math.floor(Math.random()*passages.length)];
   /* t.core is already the word without its surrounding punctuation, which is
      what the old trailing .replace() was approximating. */
@@ -287,7 +287,7 @@ function makeArenaRound(mode){
   let rawPool = poolForMode(mode);
   let qs;
   if(mode.kind==="quest"){
-    let pool = rawPool.length ? rawPool : allPassages();
+    let pool = rawPool.length ? rawPool : activePassages();
     if(mode.type==="fullRecitation"){
       const sealedPool = pool.filter(v=>state.progress[v.id].sealed);
       if(sealedPool.length) pool = sealedPool;
@@ -295,7 +295,7 @@ function makeArenaRound(mode){
     pool = shuffleArr(pool).slice(0, Math.min(QUEST_ROUND_LEN[mode.type]||6, pool.length));
     qs = pool.map(v=> buildArenaQuestion(v, mode.type, diffCfg));
   } else if(mode.kind==="blitz"){
-    const pool = rawPool.length >= 3 ? rawPool : allPassages();
+    const pool = rawPool.length >= 3 ? rawPool : activePassages();
     const seq = [];
     while(seq.length < 30) seq.push(...shuffleArr(pool));
     qs = seq.slice(0,30).map((v,i)=> buildArenaQuestion(v, BLITZ_TYPES[i%BLITZ_TYPES.length], diffCfg));
@@ -414,7 +414,7 @@ function finishArenaSession(T){
       if(a.grand.areas.every(Boolean)) unlockArenaAchievement(T, "grand_mastery");
     }
   }
-  const masteredCount = allPassages().filter(v=>state.progress[v.id].sealed).length;
+  const masteredCount = activePassages().filter(v=>state.progress[v.id].sealed).length;
   if(masteredCount>=25) unlockArenaAchievement(T, "mastered25");
   if(masteredCount>=50) unlockArenaAchievement(T, "mastered50");
   if(masteredCount>=100) unlockArenaAchievement(T, "mastered100");

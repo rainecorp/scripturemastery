@@ -31,12 +31,21 @@ function relicHTML(v, size){
   }
   const cls = [
     "relic",
+    r.designed ? "" : "relic-fallback",
     (RELIC_IMAGES && r.designed) ? "img-mode" : "",
     p.sealed ? "sealed" : "",
     p.provenIt ? "proven" : "",
     cond ? cond.cls : ""
   ].filter(Boolean).join(" ");
   return `<div class="${cls}" style="--rsz:${size}px;--trim:${d.trim.trim};--trimglow:${d.trim.glow}">${layers}${(p.sealed || p.provenIt)?'<div class="rl-ring"></div>':''}</div>`;
+}
+function scriptureSourceLink(v){
+  if(v.translation === "bsb") return {url:"https://ebible.org/engbsb/", label:"Read in the Berean Standard Bible ↗"};
+  if(v.translation === "kjv") return {url:"https://ebible.org/Scriptures/details.php?id=eng-kjv2006", label:"Read in the King James Version ↗"};
+  return {
+    url:`https://www.churchofjesuschrist.org/study/scriptures?lang=eng&query=${encodeURIComponent(v.ref)}`,
+    label:`Read ${v.ref} on ChurchofJesusChrist.org ↗`
+  };
 }
 function condBadgeHTML(p){
   const c = sealCondition(p);
@@ -62,7 +71,7 @@ function openRelicPop(v){
     !p.sealed && p.provenIt ? `<span class="tc-pill">🧩 Proven — not yet sealed</span>` : "",
     !p.sealed && !p.provenIt ? `<span class="tc-pill">${shardsFor(p)}/5 shards uncovered</span>` : ""
   ].filter(Boolean).join("");
-  const scriptureLink = `https://www.churchofjesuschrist.org/study/scriptures?lang=eng&query=${encodeURIComponent(v.ref)}`;
+  const scriptureLink = scriptureSourceLink(v);
   const safe = safePassageHTML(v);
   pop.innerHTML = `
     <div class="cer-backdrop" id="relicPopBackdrop"></div>
@@ -77,7 +86,7 @@ function openRelicPop(v){
         <div class="rp-btns">
           <button class="btn primary" id="relicPopStudy">${p.sealed ? "Review this verse ▸" : "Study this verse ▸"}</button>
           ${p.sealed ? `<button class="btn" id="relicPopShare">📣 Share this relic</button>` : ""}
-          ${v.source==="user"?"":`<a class="rp-link" href="${scriptureLink}" target="_blank" rel="noopener noreferrer">Read ${safe.ref} on ChurchofJesusChrist.org ↗</a>`}
+          ${v.source==="user"?"":`<a class="rp-link" href="${scriptureLink.url}" target="_blank" rel="noopener noreferrer">${escHTML(scriptureLink.label)}</a>`}
         </div>
       </div>
     </div>`;

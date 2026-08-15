@@ -6,6 +6,7 @@ function renderTrials(){
   const pool = trialPool();
   const a = ensureArena();
   const T = view.trialRound;
+  const hasKeyPhrases = phrasePassages(activePassages()).length > 0;
   if(view.phraseRound) return renderPhraseDrill();
   if(!pool.length){
     body.innerHTML = `
@@ -14,15 +15,17 @@ function renderTrials(){
         <h2>The Arena</h2>
         <p>The arena gates are sealed. Begin memorizing your first verse, then return here to prove it under pressure.</p>
         <button class="btn primary trial-start" id="trialLockedBtn">Find a verse to memorize ▸</button>
-        <div class="phrase-note">Key scripture phrases are ready even before your first seal.</div>
+        ${hasKeyPhrases ? `<div class="phrase-note">Key scripture phrases are ready even before your first seal.</div>
         <div class="phrase-actions">
           <button class="btn" id="lockedPhraseRef">Phrase → Reference</button>
           <button class="btn" id="lockedRefPhrase">Reference → Phrase</button>
-        </div>
+        </div>` : ""}
       </div>`;
     document.getElementById("trialLockedBtn").onclick = ()=>{ view.tab = "today"; render(); };
-    document.getElementById("lockedPhraseRef").onclick = ()=> startPhraseDrill("phraseToRef");
-    document.getElementById("lockedRefPhrase").onclick = ()=> startPhraseDrill("refToPhrase");
+    if(hasKeyPhrases){
+      document.getElementById("lockedPhraseRef").onclick = ()=> startPhraseDrill("phraseToRef");
+      document.getElementById("lockedRefPhrase").onclick = ()=> startPhraseDrill("refToPhrase");
+    }
     return;
   }
   if(!T) return renderArenaSetup();
@@ -119,7 +122,7 @@ function renderArenaSetup(){
             <div class="mc-sub">60 seconds · answer everything you can${a.blitz.best ? ` · best ${a.blitz.best}` : ""}</div>
             <div class="mc-play">▶ Play</div>
           </div>
-          <div class="mode-card phrase-mode" id="phraseToRef">
+          ${hasKeyPhrases ? `<div class="mode-card phrase-mode" id="phraseToRef">
             <div class="mc-ico">🔑</div>
             <div class="mc-name">Phrase → Reference</div>
             <div class="mc-sub">Recall the passage from its official key phrase</div>
@@ -130,7 +133,7 @@ function renderArenaSetup(){
             <div class="mc-name">Reference → Phrase</div>
             <div class="mc-sub">Produce the official key phrase from its reference</div>
             <div class="mc-play">▶ Practice</div>
-          </div>
+          </div>` : ""}
         </div>
         <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${escHTML(statusLabel)}</strong> · <strong>${escHTML(campaignLabel)}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
       </div>
@@ -250,8 +253,10 @@ function renderArenaSetup(){
     if(!view.trialRound.qs.length){ showToast("No scriptures match your filters yet."); view.trialRound = null; return; }
     renderTrials(); window.scrollTo({top:0});
   };
-  document.getElementById("phraseToRef").onclick = ()=> startPhraseDrill("phraseToRef");
-  document.getElementById("refToPhrase").onclick = ()=> startPhraseDrill("refToPhrase");
+  if(hasKeyPhrases){
+    document.getElementById("phraseToRef").onclick = ()=> startPhraseDrill("phraseToRef");
+    document.getElementById("refToPhrase").onclick = ()=> startPhraseDrill("refToPhrase");
+  }
   body.querySelectorAll(".quest-click").forEach(el=>{
     el.onclick = ()=>{ SFX.pick(); startQuestRound(el.dataset.quest); };
   });
@@ -282,7 +287,7 @@ function renderArenaSetup(){
 
 /* ---- key scripture phrase recall: production in both directions ---- */
 function makePhraseRound(direction){
-  const cards = phraseDeck(allPassages(), direction, 10);
+  const cards = phraseDeck(activePassages(), direction, 10);
   return {direction, cards:Array.from(cards), originalTotal:cards.length, i:0, got:0, missed:0, revealed:false, done:false};
 }
 function startPhraseDrill(direction){

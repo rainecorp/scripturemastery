@@ -52,3 +52,11 @@
   .path-onboarding{padding:28px 14px 42px}.path-grid{grid-template-columns:1fr}.path-card{min-height:188px;padding:17px}
   .campaign-section.retired{padding:12px}.phrase-card-main{padding:22px 14px}.phrase-actions{flex-direction:column}.phrase-actions .btn{width:100%}
 }
+
+/* T12: the shared shell keeps both paths available without discarding any
+   progress, and exposes translation only where the current track supports it. */
+.path-controls{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 14px 0;}
+.path-controls label{display:flex;align-items:center;gap:7px;background:rgba(7,22,40,.72);border:1px solid rgba(157,180,214,.25);border-radius:999px;padding:5px 7px 5px 11px;}
+.path-controls label span{color:#9db4d6;font-size:9px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;}
+.path-controls select{max-width:min(64vw,260px);border:0;border-radius:999px;background:#122b45;color:#f8fafc;font:800 11px/1.2 system-ui;padding:7px 25px 7px 10px;}
+.path-controls select:focus-visible{outline:2px solid #f4b942;outline-offset:2px;}

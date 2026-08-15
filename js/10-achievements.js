@@ -5,9 +5,9 @@
    ACHIEVEMENTS — app-wide, computed from state. Encouraging
    by design: every locked badge shows live progress.
    ========================================================= */
-function sealedTotal(){ return allPassages().filter(v=>state.progress[v.id].sealed).length; }
-function eternalTotal(){ return allPassages().filter(v=>isEternal(state.progress[v.id])).length; }
-function provenTotal(){ return allPassages().filter(v=>state.progress[v.id].provenIt).length; }
+function sealedTotal(){ return activePassages().filter(v=>state.progress[v.id].sealed).length; }
+function eternalTotal(){ return activePassages().filter(v=>isEternal(state.progress[v.id])).length; }
+function provenTotal(){ return activePassages().filter(v=>state.progress[v.id].provenIt).length; }
 function hasCrownedCampaign(){
   return activeCampaigns().some(c=>{
     const s = towerStats(c.id);
@@ -16,13 +16,13 @@ function hasCrownedCampaign(){
 }
 const ACHIEVEMENTS = [
   {id:"first_shard", cat:"climb", emoji:"✨", name:"First Light",        desc:"Uncover your first relic shard", goal:1,
-    cur:()=> allPassages().some(v=>{const p=state.progress[v.id]; return p.sealed||(p.stage||0)>0;}) ? 1 : 0},
+    cur:()=> activePassages().some(v=>{const p=state.progress[v.id]; return p.sealed||(p.stage||0)>0;}) ? 1 : 0},
   {id:"first_seal", cat:"climb", emoji:"🏺", name:"Relic Keeper",       desc:"Seal your first verse", goal:1, cur:sealedTotal},
   {id:"seals_5",    cat:"climb", emoji:"🗼", name:"Five Floors High",   desc:"Seal 5 verses", goal:5, cur:sealedTotal},
   {id:"seals_10",   cat:"climb", emoji:"🌄", name:"Above the Mist",     desc:"Seal 10 verses", goal:10, cur:sealedTotal},
   {id:"seals_25",   cat:"climb", emoji:"🏰", name:"Tower Heart",        desc:"Seal 25 verses", goal:25, cur:sealedTotal},
   {id:"seals_50",   cat:"climb", emoji:"⛰️", name:"Summit Seeker",      desc:"Seal 50 verses", goal:50, cur:sealedTotal},
-  {id:"seals_100",  cat:"climb", emoji:"🌟", name:"Keeper of All Words",desc:"Seal every passage in your collection", goal:allPassages().length, cur:sealedTotal},
+  {id:"seals_100",  cat:"climb", emoji:"🌟", name:"Keeper of All Words",desc:"Seal every passage in your collection", goal:()=>activePassages().length, cur:sealedTotal},
   {id:"crowned",    cat:"climb", emoji:"👑", name:"Crowned Tower",      desc:"Complete every floor of one tower", goal:1, cur:hasCrownedCampaign},
   {id:"eternal_1",  cat:"climb", emoji:"♾️", name:"Written on the Heart", desc:"Earn your first Eternal Seal", goal:1, cur:eternalTotal},
   {id:"eternal_5",  cat:"climb", emoji:"💎", name:"Unfading Five",      desc:"Hold 5 Eternal Seals", goal:5, cur:eternalTotal},
@@ -54,7 +54,8 @@ const ACHV_CATS = [
   {id:"arena",  label:"⚔️ The Arena"},
   {id:"journey",label:"🧭 The Journey"}
 ];
-function achvCur(a){ try{ return Math.min(a.goal, a.cur()); }catch(e){ return 0; } }
+function achvGoal(a){ try{ return typeof a.goal === "function" ? a.goal() : a.goal; }catch(e){ return 1; } }
+function achvCur(a){ try{ return Math.min(achvGoal(a), a.cur()); }catch(e){ return 0; } }
 /* Tap an achievement → jump to the screen (and button) that earns it. */
 function applySpot(){
   const sel = view.spot; if(!sel) return; view.spot = null;
@@ -73,7 +74,7 @@ function achvGo(id){
     view.tab = tab; render(); window.scrollTo({top:0});
   };
   const goVerse = (v, review, spot)=>{ view.spot = spot || null; openStudy(v.id, !!review); };
-  const dueV = allPassages().find(v=>isDue(state.progress[v.id]));
+  const dueV = activePassages().find(v=>isDue(state.progress[v.id]));
   switch(id){
     case "first_shard": case "rank_scribe": case "rank_guardian": case "rank_keeper":
       goVerse(recommendedVerse(), false); break;
@@ -82,7 +83,7 @@ function achvGo(id){
     case "seals_5": case "seals_10": case "seals_25": case "seals_50": case "seals_100": case "crowned":
       goTab("towers"); break;
     case "proven_5": {
-      const t = allPassages().find(v=>state.progress[v.id].sealed && !state.progress[v.id].provenIt) || recommendedVerse();
+      const t = activePassages().find(v=>state.progress[v.id].sealed && !state.progress[v.id].provenIt) || recommendedVerse();
       goVerse(t, isDue(state.progress[t.id]), "proveItBtn"); break;
     }
     case "eternal_1": case "eternal_5": case "reseal_10":
@@ -108,8 +109,8 @@ function achvUnlockedCount(){ return Object.keys((state.achv||{}).unlocked||{}).
 function topProgressingAchievements(n){
   return ACHIEVEMENTS
     .filter(a=>!state.achv.unlocked[a.id])
-    .map(a=>({a, cur:achvCur(a), pct:achvCur(a)/a.goal}))
-    .sort((x,y)=> y.pct - x.pct || x.a.goal - y.a.goal)
+    .map(a=>({a, cur:achvCur(a), goal:achvGoal(a), pct:achvCur(a)/achvGoal(a)}))
+    .sort((x,y)=> y.pct - x.pct || x.goal - y.goal)
     .slice(0, n||5);
 }
 let _achvBusy = false;
@@ -122,7 +123,7 @@ function checkAchievements(){
       let any = false;
       ACHIEVEMENTS.forEach(a=>{
         if(state.achv.unlocked[a.id]) return;
-        if(achvCur(a) >= a.goal){
+        if(achvCur(a) >= achvGoal(a)){
           state.achv.unlocked[a.id] = Date.now();
           state.xp += 10;
           fresh.push(a);
@@ -177,7 +178,8 @@ function openAchvPop(){
               ${items.map(a=>{
                 const un = state.achv.unlocked[a.id];
                 const cur = achvCur(a);
-                const p = Math.round((cur/a.goal)*100);
+                const goal = achvGoal(a);
+                const p = Math.round((cur/goal)*100);
                 return `
                   <div class="achv-item ${un?'won':'achv-link'}" ${un?'':`data-achv="${a.id}" title="Tap to go earn ${a.name}"`}>
                     <div class="achv-badge">${a.emoji}</div>
@@ -186,7 +188,7 @@ function openAchvPop(){
                       <div class="achv-desc">${a.desc}</div>
                       ${un ? '' : `<div class="achv-bar"><i style="width:${p}%"></i></div>`}
                     </div>
-                    <div class="achv-prog">${un ? new Date(un).toLocaleDateString(undefined,{month:"short",day:"numeric"}) : `${cur}/${a.goal}`}</div>
+                    <div class="achv-prog">${un ? new Date(un).toLocaleDateString(undefined,{month:"short",day:"numeric"}) : `${cur}/${goal}`}</div>
                   </div>`;
               }).join("")}
             </div>`;

@@ -8,6 +8,7 @@ function renderTowers(){
   const body = document.getElementById("body");
   const campaigns = activeCampaigns();
   const groups = [
+    {id:"christian", title:"Christian Scripture Memory", desc:"Six ways into Scripture—foundations, gospel, comfort, courage, Psalms, and verses for young hearts."},
     {id:"doctrinal", title:"Current Doctrinal Mastery", desc:"The official current Seminary curriculum—24 passages in each course."},
     {id:"articles", title:"Articles of Faith", desc:"Thirteen declarations of belief, built as their own climb."},
     {id:"custom", title:"My Personal Towers", desc:"Each passage you add raises the roof by one floor."},

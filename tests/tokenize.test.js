@@ -95,20 +95,22 @@ eq(tokenWords("Joseph Smith—History 1:15–20").map(t=>t.core),
 eq(tokenWords("Joseph Smith—History")[1].norm, "smithhistory", "internal em dash drops out of norm");
 
 /* --------------------------------------------------- the real passage set -- */
-section("all 158 shipped passages");
+section("all 356 shipped passage translations");
 
 const {registerContentPack, registeredContentPacks, compileContentPacks} = require("../js/00-content.js");
 global.SQ = {registerContentPack}; global.window = { SQ: global.SQ };
-["passages.js","articles-of-faith.js","doctrinal-mastery.js"].forEach(file=>
+["passages.js","articles-of-faith.js","doctrinal-mastery.js","christian.js"].forEach(file=>
   eval(fs.readFileSync(path.join(__dirname,"..","data",file),"utf8")));
 const ALL = compileContentPacks(registeredContentPacks(), {}).passages;
+const ALL_TEXTS = ALL.flatMap(v=>Object.entries(v.texts).map(([translation,text])=>({...v,translation,text})));
 
-eq(ALL.length, 158, "158 passages loaded");
+eq(ALL.length, 250, "250 canonical passages loaded");
+eq(ALL_TEXTS.length, 356, "356 exact translation texts loaded");
 
 /* every passage round-trips */
 {
-  const broken = ALL.filter(v => tokenText(tokenize(v.text)) !== v.text).map(v=>v.ref);
-  eq(broken, [], "every passage round-trips through the tokenizer");
+  const broken = ALL_TEXTS.filter(v => tokenText(tokenize(v.text)) !== v.text).map(v=>`${v.ref}:${v.translation}`);
+  eq(broken, [], "every passage translation round-trips through the tokenizer");
 }
 
 /* THE POINT OF THE TICKET: one index, everywhere.
@@ -118,9 +120,9 @@ eq(ALL.length, 158, "158 passages loaded");
   const studyIndex = v => tokenize(v.text).filter(t=>t.isWord).length;
   const arenaIndex = v => tokenWords(v.text).length;
   const countHelper = v => wordCount(v.text);
-  const disagree = ALL.filter(v => !(studyIndex(v) === arenaIndex(v) && arenaIndex(v) === countHelper(v)))
-                      .map(v => v.ref);
-  eq(disagree, [], "study index === arena index === wordCount, for all 158 passages");
+  const disagree = ALL_TEXTS.filter(v => !(studyIndex(v) === arenaIndex(v) && arenaIndex(v) === countHelper(v)))
+                      .map(v => `${v.ref}:${v.translation}`);
+  eq(disagree, [], "study index === arena index === wordCount, for all 356 translation texts");
 }
 
 /* Free-standing punctuation is not a word.
