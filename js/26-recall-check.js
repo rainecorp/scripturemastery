@@ -32,6 +32,9 @@ function openRecallCheck(v, mode){
   const session = createRecallSession(v.text, { strictMode: !!state.strictMode });
   recallState = {
     v, mode, session,
+    attemptId: `recall:${v.id}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`,
+    startedAt: Date.now(),
+    recorded: false,
     tokens: displayTokens(v.text),   // full stream incl. punctuation, for rendering
     phase: isRecallComplete(session) ? "results" : "typing",
     announce: mode === "first"
@@ -41,6 +44,24 @@ function openRecallCheck(v, mode){
   document.removeEventListener("keydown", recallKeyHandler);
   document.addEventListener("keydown", recallKeyHandler);
   renderRecallCheck();
+}
+
+function recordRecallLearning(v, grade, correct, troublePositions, modeLabel){
+  if(!recallState || recallState.recorded) return;
+  const p=state.progress[v.id];
+  const words=tokenWords(v.text);
+  recordLearningAttempt(state,v.id,{
+    id:recallState.attemptId,
+    at:Date.now(),
+    mode:modeLabel||"recallCheck",
+    grade,
+    correct,
+    troublePositions:troublePositions||[],
+    attemptedPositions:words.map(t=>t.index),
+    durationMs:Date.now()-recallState.startedAt
+  },{wordCount:words.length,schedule:p.sealed,eternal:isEternal(p)});
+  recallState.recorded=true;
+  saveState();
 }
 
 function closeRecallCheck(){
@@ -241,8 +262,9 @@ function renderRecallCheck(){
     document.getElementById("recallBackdrop").onclick = closeRecallCheck;
     document.getElementById("recallSelfBack").onclick = ()=>{ recallState.phase = "typing"; renderRecallCheck(); };
     document.getElementById("recallSelfYes").onclick = ()=>{
+      recordRecallLearning(v,"hard",true,[],"recallSelfReport");
       closeRecallCheck();
-      performReseal(v, { selfReported: true });
+      performReseal(v, { selfReported: true, grade:"hard", scheduled:true });
     };
     el.classList.add("show");
     return;
@@ -253,10 +275,12 @@ function renderRecallCheck(){
   const grade = gradeRecallSession(session);
   const gate = recallGateType(mode);
   const passed = recallMeetsGate(grade.grade, gate);
-  const wobbled = recallState.tokens.filter(t => t.isWord).filter(t=>{
+  const wobbledTokens = recallState.tokens.filter(t => t.isWord).filter(t=>{
     const s = session.slots[t.index];
     return s.misses > 0 || s.revealed;
-  }).map(t => t.raw);
+  });
+  const wobbled = wobbledTokens.map(t => t.raw);
+  recordRecallLearning(v,grade.grade,passed,wobbledTokens.map(t=>t.index));
 
   const pct = Math.round(grade.accuracy * 100);
   const primaryLabel = passed
@@ -302,7 +326,8 @@ function renderRecallCheck(){
   document.getElementById("recallPrimary").onclick = ()=>{
     if(passed){
       closeRecallCheck();
-      if(mode === "first") performSeal(v); else performReseal(v);
+      if(mode === "first") performSeal(v,grade.grade);
+      else performReseal(v,{grade:grade.grade,scheduled:true});
     } else {
       openRecallCheck(v, mode);   // "Try again" — free, unlimited, no cost either way
     }
@@ -316,9 +341,9 @@ function renderRecallCheck(){
    changed is WHERE it's called from: only after recallMeetsGate() says
    yes, never from a bare button tap. */
 
-function performSeal(v){
+function performSeal(v, grade){
   const p = state.progress[v.id];
-  sealVerse(p);
+  sealVerse(p,grade||"good");
   const climb = recordClimb(v, view.campaignId);
   emitBridge("seal", v, 25);
   state.xp += 50;
@@ -339,7 +364,7 @@ function performSeal(v){
 function performReseal(v, opts){
   opts = opts || {};
   const p = state.progress[v.id];
-  const res = resealVerse(p);
+  const res = resealVerse(p,opts.grade||"good",{scheduled:!!opts.scheduled});
   emitBridge(res.eternal ? "eternal" : "reseal", v, res.eternal ? 40 : 10);
   state.xp += res.xp;
   const heartGain = refillArenaHearts(1);

@@ -288,7 +288,18 @@ function renderArenaSetup(){
 /* ---- key scripture phrase recall: production in both directions ---- */
 function makePhraseRound(direction){
   const cards = phraseDeck(activePassages(), direction, 10);
-  return {direction, cards:Array.from(cards), originalTotal:cards.length, i:0, got:0, missed:0, revealed:false, done:false};
+  return {direction, cards:Array.from(cards), originalTotal:cards.length, i:0, got:0, missed:0, revealed:false, done:false,
+    runId:`phrase:${Date.now()}:${Math.random().toString(36).slice(2,7)}`};
+}
+function recordPhraseCard(round,card,grade,correct){
+  const p=state.progress[card.passageId];
+  if(!p) return;
+  recordLearningAttempt(state,card.passageId,{
+    id:`${round.runId}:${round.i}`,
+    mode:`keyPhrase:${round.direction}`,
+    grade,correct
+  },{wordCount:wordCount(passageById(card.passageId).text),schedule:false,eternal:isEternal(p)});
+  saveState();
 }
 function startPhraseDrill(direction){
   SFX.pick();
@@ -351,9 +362,10 @@ function renderPhraseDrill(){
   const reveal = document.getElementById("phraseReveal");
   if(reveal) reveal.onclick = ()=>{ round.revealed=true; SFX.pick(); renderPhraseDrill(); };
   const got = document.getElementById("phraseGot");
-  if(got) got.onclick = ()=>{ round.got++; round.i++; round.revealed=false; SFX.correct(1); renderPhraseDrill(); };
+  if(got) got.onclick = ()=>{ recordPhraseCard(round,card,"good",true); round.got++; round.i++; round.revealed=false; SFX.correct(1); renderPhraseDrill(); };
   const again = document.getElementById("phraseAgainCard");
   if(again) again.onclick = ()=>{
+    recordPhraseCard(round,card,"again",false);
     round.missed++;
     if(!card.retry) round.cards.push({...card,retry:true});
     round.i++; round.revealed=false; SFX.tap(); renderPhraseDrill();
@@ -790,6 +802,8 @@ function renderArenaSession(){
               setTimeout(()=> renderArenaSession(), 95);
             }
           } else {
+            const offset=q.chunks.slice(0,q.builtIndex).reduce((n,c)=>n+wordCount(c),0);
+            q.buildMissPositions.push(...tokenWords(q.chunks[q.builtIndex]).map((_,i)=>offset+i));
             SFX.wrong();
             btn.classList.add("wrong");
             setTimeout(()=> btn.classList.remove("wrong"), 400);

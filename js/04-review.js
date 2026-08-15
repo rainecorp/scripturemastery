@@ -5,28 +5,37 @@
    REVIEW ENGINE — seals fade, re-seals climb the ladder
    ========================================================= */
 function isEternal(p){ return p.sealed && (p.reviewLevel||0) >= REVIEW_LADDER.length; }
-function sealVerse(p){
+function sealVerse(p, grade){
   const now = Date.now();
   p.sealed = true; p.stage = 4;
   p.sealedAt = now; p.reviewLevel = 0; p.reviews = 0;
-  p.nextReviewAt = now + REVIEW_LADDER[0]*DAY;
+  p.srs = sm2Review(null, grade||"good", now);
+  p.nextReviewAt = p.srs.dueAt;
 }
-function resealVerse(p){
+function resealVerse(p, grade, opts){
+  opts=opts||{};
   const now = Date.now();
   const overdueDays = (now - (p.nextReviewAt||now)) / DAY;
-  let lvl = p.reviewLevel || 0;
-  if(overdueDays > 10) lvl = Math.max(0, lvl - 1);   // cracked seals slip a rung
-  else lvl = Math.min(REVIEW_LADDER.length, lvl + 1);
+  if(!opts.scheduled){
+    p.srs=sm2Review(p.srs,grade||"good",now);
+    p.nextReviewAt=p.srs.dueAt;
+  }
+  const lvl=Math.min(REVIEW_LADDER.length,
+    reviewLevelForStability(p.srs?.stabilityDays||0,REVIEW_LADDER));
   p.reviewLevel = lvl;
   p.reviews = (p.reviews||0) + 1;
   p.lastReviewAt = now;
   state.resealsTotal = (state.resealsTotal||0) + 1;
   const eternal = lvl >= REVIEW_LADDER.length;
-  p.nextReviewAt = eternal ? now + 365*DAY*50 : now + REVIEW_LADDER[Math.min(lvl, REVIEW_LADDER.length-1)]*DAY;
+  if(eternal){
+    p.nextReviewAt = now + 365*DAY*50;
+    p.nextPolishAt = now + ETERNAL_POLISH_DAYS*DAY;
+  }
   const xp = 15 + 5*lvl + (overdueDays <= 0 ? 10 : 0);
   return {eternal, xp, lvl};
 }
 function isDue(p){ return p.sealed && !isEternal(p) && Date.now() >= (p.nextReviewAt||0); }
+function isPolishDue(p){ return isEternal(p) && Date.now() >= (p.nextPolishAt||0); }
 function sealCondition(p){
   if(!p || !p.sealed) return null;
   if(isEternal(p)) return {id:"eternal", label:"Eternal ✦", cls:"cond-eternal"};
@@ -42,7 +51,12 @@ function dueReviews(){
     .sort((a,b)=>state.progress[a.id].nextReviewAt - state.progress[b.id].nextReviewAt);
 }
 function nextReviewText(p){
-  if(isEternal(p)) return "Sealed forever";
+  if(isEternal(p)){
+    const ms=(p.nextPolishAt||0)-Date.now();
+    if(ms<=0) return "Eternal · optional polish due";
+    const d=Math.ceil(ms/DAY);
+    return `Eternal · optional polish in ${d} day${d===1?"":"s"}`;
+  }
   const ms = (p.nextReviewAt||0) - Date.now();
   if(ms <= 0) return "Re-seal due now";
   const d = Math.ceil(ms/DAY);
@@ -60,6 +74,7 @@ SQ.isEternal = isEternal;
 SQ.sealVerse = sealVerse;
 SQ.resealVerse = resealVerse;
 SQ.isDue = isDue;
+SQ.isPolishDue = isPolishDue;
 SQ.sealCondition = sealCondition;
 SQ.dueReviews = dueReviews;
 SQ.nextReviewText = nextReviewText;

@@ -12,11 +12,18 @@ function renderVerseHTML(text, stage, blanked, marks, smart){
     let hl="",style="",meta="";
     const hit=smart?.selected?.get(myIdx);
     if(hit){
-      const role=HL_ROLES[hit.role];
-      hl=" hlc";
-      const strength=hit.priority>=95?"0 0 0 1px rgba(30,41,59,.10) inset":"none";
-      style=` style="background:${role.color};box-shadow:${strength}"`;
-      meta=` data-role="${hit.role}" data-priority="${hit.priority}" title="${role.label}"`;
+      if(hit.type==="trouble"){
+        const alpha=Math.min(.46,.15+(Number(hit.weight)||0)*.045);
+        hl=" hlc trouble-word";
+        style=` style="--trouble-alpha:${alpha}"`;
+        meta=` data-trouble="true" data-priority="${hit.priority}" title="Practice this trouble spot"`;
+      }else{
+        const role=HL_ROLES[hit.role];
+        hl=" hlc";
+        const strength=hit.priority>=95?"0 0 0 1px rgba(30,41,59,.10) inset":"none";
+        style=` style="background:${role.color};box-shadow:${strength}"`;
+        meta=` data-role="${hit.role}" data-priority="${hit.priority}" title="${role.label}"`;
+      }
     }
     if(stage===0) return `${num}<span class="w${hl}" data-i="${myIdx}"${meta}${style}>${safeTok}</span>`;
     if(stage===1||stage===2){
@@ -32,6 +39,23 @@ function renderVerseHTML(text, stage, blanked, marks, smart){
     if(stage===4) return `${num}<span class="w blank" data-i="${myIdx}">${safeTok}</span>`;
     return `${num}<span class="w${hl}" data-i="${myIdx}"${meta}${style}>${safeTok}</span>`;
   }).join("");
+}
+
+function troubleDrillHTML(v){
+  const drill=view.troubleDrill;
+  if(!drill || drill.passageId!==v.id) return "";
+  const feedback=view.troubleFeedback;
+  return `<section class="trouble-drill" aria-label="Trouble spot phrase drill">
+    <div class="trouble-drill-head"><div><span>Trouble spot drill</span><strong>Say the phrase, then type it from memory.</strong></div><button class="trouble-close" id="troubleClose" aria-label="Close phrase drill">×</button></div>
+    <div class="trouble-cue">${escHTML(drill.cue)}</div>
+    <form class="trouble-form" id="troubleForm">
+      <label for="troubleInput">The missing phrase</label>
+      <div><input id="troubleInput" autocomplete="off" autocapitalize="none" spellcheck="false"><button class="btn primary" type="submit">Check phrase</button></div>
+    </form>
+    ${feedback ? `<div class="trouble-feedback ${feedback.ok?"ok":"again"}" role="status">${feedback.ok
+      ? "✓ Clean recall. This spot is cooling down."
+      : `Not yet. Compare: <strong>${escHTML(drill.phrase)}</strong>`}</div>` : ""}
+  </section>`;
 }
 function pickBlankSet(text, fraction){
   const wordIdxs = tokenWords(text).map(t=>t.index);
@@ -78,8 +102,12 @@ function renderStudy(){
   if(stage!==1 && stage!==2) view.stageFor=null;
 
   const marks = verseNumberMap(v);
-  const smart = classifyVerse(v.text);
+  const studyMode=view.studyMode || (view.highlightMode===false?"plain":"meaning");
+  const smart = studyMode==="meaning" ? classifyVerse(v.text)
+    : (studyMode==="trouble" ? troubleHighlightsFor(p) : null);
   const verseHTML = renderVerseHTML(v.text, stage, view.blanked, marks, smart);
+  const strength=displayStrength(p);
+  const troubleCount=Object.keys(p.trouble||{}).filter(k=>(p.trouble[k]?.weight||0)>=.12).length;
 
   let primaryLabel;
   if(!p.sealed) primaryLabel = stage<4 ? "I've got it, harder ▸" : "Recite &amp; Seal ✦";
@@ -95,7 +123,8 @@ function renderStudy(){
         <div class="sr-info">
           <div class="sr-name">${escHTML(r.name)}</div>
           <div class="sr-tier" style="color:${diff.trim.trim}">${diff.trim.metal} relic · ${shards}/5 shards</div>
-          <div class="sr-cond">${p.sealed ? `${condBadgeHTML(p)} <span style="color:#9db4d6;font-size:11px;font-weight:800;margin-left:4px;">${nextReviewText(p)}</span>` : `<span style="color:#9db4d6;font-size:11px;font-weight:800;">Each stage you pass reveals a shard</span>`}</div>
+          <div class="sr-cond">${p.sealed ? `${condBadgeHTML(p)} <span class="schedule-label">SM-2 schedule · ${nextReviewText(p)}</span>` : `<span class="schedule-label">Each stage you pass reveals a shard</span>`}</div>
+          <div class="display-strength" title="A friendly progress display. It does not set review dates.">Recall strength · ${strength}% <span>display only</span></div>
         </div>
       </div>
 
@@ -113,14 +142,18 @@ function renderStudy(){
       </div>
       <div class="stage-label" style="margin-top:8px;color:var(--muted);letter-spacing:.12em;"><span>Memory stage: ${stageLabel(stage)}</span></div>
       ${stage===0 ? `
-        <div class="hl-toolbar">
-          <button class="btn hl-toggle ${view.highlightMode?'active':''}" id="hlToggle">🖍️ Smart highlights ${view.highlightMode?'· on':'· off'}</button>
+        <div class="study-mode-switch" role="group" aria-label="Passage display">
+          <button class="study-mode ${studyMode==='meaning'?'active':''}" data-study-mode="meaning">Meaning</button>
+          <button class="study-mode ${studyMode==='trouble'?'active':''}" data-study-mode="trouble">Trouble spots${troubleCount?` · ${troubleCount}`:""}</button>
+          <button class="study-mode ${studyMode==='plain'?'active':''}" data-study-mode="plain">Plain</button>
         </div>
-        ${view.highlightMode ? `<div class="hl-hint">Colors reveal repeated anchor words, key phrases, doctrine, invitations, promises, and warnings.</div>
+        ${studyMode==='meaning' ? `<div class="hl-hint">Colors reveal repeated anchor words, key phrases, doctrine, invitations, promises, and warnings.</div>
         <div class="hl-legend">${["deity","anchor","foundation","faith","love","command","promise","warning","agency","identity"].map(k=>`<span class="hl-key"><i class="hl-swatch" style="background:${HL_ROLES[k].color}"></i>${HL_ROLES[k].label}</span>`).join("")}</div>` : ``}
+        ${studyMode==='trouble' ? `<div class="hl-hint trouble-hint">Warm words are places your recent practice found difficult. Tap one for a focused phrase drill.${troubleCount?"":" No trouble spots recorded yet."}</div>` : ``}
       ` : ``}
-      <div class="verse-text ${stage===0 && !view.highlightMode ? 'hl-off' : ''}" id="verseText">${verseHTML}</div>
+      <div class="verse-text ${stage===0 && studyMode==='plain' ? 'hl-off' : ''} study-${studyMode}" id="verseText">${verseHTML}</div>
       ${verificationNoteHTML(v)}
+      ${troubleDrillHTML(v)}
 
       <div class="stage-progress">
         ${STAGES.map((s,i)=>`<div class="stage-dot ${i<stage?'done':(i===stage?'current':'')}"></div>`).join("")}
@@ -149,8 +182,42 @@ function renderStudy(){
     };
   });
 
-  const hlToggle = document.getElementById("hlToggle");
-  if(hlToggle) hlToggle.onclick = ()=>{ view.highlightMode = !view.highlightMode; renderStudy(); };
+  body.querySelectorAll(".study-mode[data-study-mode]").forEach(btn=>{
+    btn.onclick=()=>{
+      view.studyMode=btn.dataset.studyMode;
+      view.highlightMode=view.studyMode==="meaning";
+      view.troubleDrill=null; view.troubleFeedback=null;
+      renderStudy();
+    };
+  });
+  body.querySelectorAll(".w[data-trouble]").forEach(el=>{
+    el.onclick=()=>{
+      const phrase=troublePhraseWindow(v.text,Number(el.dataset.i),4);
+      view.troubleDrill={...phrase,passageId:v.id,
+        attemptId:`trouble:${v.id}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`,startedAt:Date.now()};
+      view.troubleFeedback=null;
+      renderStudy();
+      document.getElementById("troubleInput")?.focus();
+    };
+  });
+  const troubleClose=document.getElementById("troubleClose");
+  if(troubleClose) troubleClose.onclick=()=>{ view.troubleDrill=null; view.troubleFeedback=null; renderStudy(); };
+  const troubleForm=document.getElementById("troubleForm");
+  if(troubleForm) troubleForm.onsubmit=e=>{
+    e.preventDefault();
+    const drill=view.troubleDrill;
+    const input=document.getElementById("troubleInput").value;
+    const misses=troublePositionsForPhraseAttempt(drill,input);
+    const ok=misses.length===0 && normWords(input).length===drill.positions.length;
+    recordLearningAttempt(state,v.id,{
+      id:drill.attemptId,mode:"troublePhrase",grade:ok?"good":"again",correct:ok,
+      troublePositions:misses,attemptedPositions:drill.positions,durationMs:Date.now()-drill.startedAt
+    },{wordCount:wordCount(v.text),schedule:false,eternal:isEternal(p)});
+    drill.attemptId=`trouble:${v.id}:${Date.now()}:${Math.random().toString(36).slice(2,7)}`;
+    drill.startedAt=Date.now();
+    view.troubleFeedback={ok};
+    saveState(); SFX[ok?"correct":"wrong"](); renderStudy();
+  };
 
   const shuffleBtn = document.getElementById("shuffleBtn");
   if(shuffleBtn) shuffleBtn.onclick = ()=>{
@@ -164,6 +231,7 @@ function renderStudy(){
   document.getElementById("prevStage").onclick = ()=>{
     view.stage = Math.max(0, view.stage-1);
     view.blanked = new Set(); view.stageFor=null;
+    view.troubleDrill=null; view.troubleFeedback=null;
     renderStudy();
   };
 

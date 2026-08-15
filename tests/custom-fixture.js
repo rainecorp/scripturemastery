@@ -19,7 +19,7 @@
   });
   const progress=Object.fromEntries(customPassages.map(v=>[v.id,{stage:0,sealed:false}]));
   const state={
-    schemaVersion:3,track:"seminary",translation:"lds2013",startingCampaignId:"camp_dm_bom",
+    schemaVersion:4,track:"seminary",translation:"lds2013",startingCampaignId:"camp_dm_bom",
     onboardingComplete:true,onboardingChoice:"seminary",xp:0,streak:0,bestStreak:0,lastDay:null,
     shields:0,shares:0,resealsTotal:0,sound:false,strictMode:false,calendar:{},achv:{unlocked:{}},
     progress,customPassages,

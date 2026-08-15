@@ -81,17 +81,17 @@
     [0,1,2,3,4].forEach(stg=>{
       snap(`study.${v.id}.s${stg}`, ()=>{
         view.tab="study"; view.passageId=v.id; view.stage=stg;
-        view.blanked=new Set(); view.reviewMode=false; view.highlightMode=true;
+        view.blanked=new Set(); view.reviewMode=false; view.highlightMode=true; view.studyMode="meaning";
         render();
       });
     });
     snap(`study.${v.id}.hl-off`, ()=>{
       view.tab="study"; view.passageId=v.id; view.stage=1;
-      view.blanked=new Set(); view.highlightMode=false; render();
+      view.blanked=new Set(); view.highlightMode=false; view.studyMode="plain"; render();
     });
     snap(`study.${v.id}.review`, ()=>{
       view.tab="study"; view.passageId=v.id; view.stage=4;
-      view.blanked=new Set(); view.reviewMode=true; view.highlightMode=true; render();
+      view.blanked=new Set(); view.reviewMode=true; view.highlightMode=true; view.studyMode="meaning"; render();
     });
   });
 

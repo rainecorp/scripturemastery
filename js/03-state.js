@@ -108,7 +108,7 @@ function loadState(){
        number, but a migration should not rely on that alone — check
        before you touch, the same discipline `def()` already uses below.
    ========================================================= */
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const MIGRATIONS = [
   {
     to: 1,
@@ -144,6 +144,16 @@ const MIGRATIONS = [
         s.translation = "lds2013";
         s.startingCampaignId = "camp_dm_bom";
       }
+    }
+  },
+  {
+    to: 4,
+    describe: "add bounded learning events, lifetime aggregates, word-position trouble, and SM-2 review state",
+    run(s){
+      if(!Array.isArray(s.learningLog)) s.learningLog=[];
+      if(!s.learningLifetime || typeof s.learningLifetime!=="object") s.learningLifetime=learningAggregate();
+      if(!s.progress || typeof s.progress!=="object") s.progress={};
+      Object.values(s.progress).forEach(ensurePassageLearning);
     }
   }
 ];
@@ -271,7 +281,10 @@ function applyProgressImport(data){
   if(!Array.isArray(state.customPassages)) state.customPassages = [];
   if(!Array.isArray(state.collections)) state.collections = [];
   state.customCampaigns = customCampaignsFromCollections(state.collections);
-  allPassages().forEach(v=>{ if(!state.progress[v.id]) state.progress[v.id]={stage:0,sealed:false}; });
+  allPassages().forEach(v=>{
+    if(!state.progress[v.id]) state.progress[v.id]={stage:0,sealed:false};
+    ensurePassageLearning(state.progress[v.id]);
+  });
   persistState();
   return true;
 }
@@ -320,6 +333,14 @@ function isQuotaError(e){
    NOTHING IN THIS LIST IS PROGRESS. When T13 adds the learning-event log,
    it goes here — at the top, above the calendar. */
 const STORAGE_SHED_LADDER = [
+  {
+    name: "older learning-event detail",
+    shed(){
+      if(!Array.isArray(state.learningLog) || state.learningLog.length <= 50) return false;
+      state.learningLog = state.learningLog.slice(-50);
+      return true;
+    }
+  },
   {
     name: "the Daily Quest event queue",
     shed(){
@@ -478,10 +499,11 @@ function claimReward(key){
 }
 
 let state = loadState();
+const MIGRATED_AT_BOOT = (state.schemaVersion||0) < SCHEMA_VERSION;
 runMigrations(state);
 /* v2 migrations: habit calendar, streak shields, achievements, sharing, sound */
 (function fillStateDefaults(){
-  let ch = false;
+  let ch = MIGRATED_AT_BOOT;
   const def = (k, val)=>{ if(state[k] == null){ state[k] = val; ch = true; } };
   def("calendar", {});
   def("bestStreak", state.streak||0);
@@ -499,6 +521,8 @@ runMigrations(state);
   def("collections", []);
   def("customPassages", []);
   def("customCampaigns", []);
+  def("learningLog", []);
+  def("learningLifetime", learningAggregate());
   def("entitlement", {tier:"free",source:null,expiresAt:null});
   const configuredTrack = trackById(state.track) || allTracks()[0];
   if(configuredTrack && configuredTrack.id !== state.track){ state.track=configuredTrack.id; ch=true; }
@@ -526,6 +550,7 @@ runMigrations(state);
 })();
 allPassages().forEach(v=>{
   if(!state.progress[v.id]) state.progress[v.id] = {stage:0, sealed:false};
+  ensurePassageLearning(state.progress[v.id]);
 });
 /* migrate old sealed verses into the review system */
 (function migrate(){

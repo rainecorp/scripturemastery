@@ -41,16 +41,17 @@ node tests/verify.test.js
 node tests/content.test.js
 node tests/phrases.test.js
 node tests/custom.test.js
+node tests/learning.test.js
 ```
-These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c/T12), content/tower/translation contracts (T9/T10/T12), T10's bidirectional key-phrase cards, and T11's custom-content, escaping, entitlement, and tall-tower contracts. They pass today (**89 + 86 + 41 + 94 + 14 + 30 = 354 assertions**).
+These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c/T12), content/tower/translation contracts (T9/T10/T12), T10's bidirectional key-phrase cards, T11's custom-content/escaping/entitlement/tall-tower contracts, and T13's learning events, exact trouble positions, phrase windows, SM-2 scheduling, display-strength isolation, and Eternal polish. They pass today (**89 + 86 + 41 + 94 + 14 + 30 + 24 = 378 assertions**).
 
-**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-custom.js`, `js/00-html.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`, `js/00-phrases.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, onboarding, and campaign UI behavior — is verified in the real browser app with the fixtures. `tests/onboarding-fixture.html` opens a true first run; `tests/seed-fixture.html` opens the schema-current mid-progress state. `tests/custom-fixture.html?floors=7` seeds the exact XSS regression passage and accepts `floors=10`, `60`, or `145` for cap and geometry checks. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
+**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-custom.js`, `js/00-html.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`, `js/00-phrases.js`, `js/00-learning.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, onboarding, and campaign UI behavior — is verified in the real browser app with the fixtures. `tests/onboarding-fixture.html` opens a true first run; `tests/seed-fixture.html` opens the schema-current mid-progress state. `tests/custom-fixture.html?floors=7` seeds the exact XSS regression passage and accepts `floors=10`, `60`, or `145` for cap and geometry checks. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
 
 **Fingerprinting** (`tests/fingerprint.js`): a deterministic DOM + computed-style hash of every screen, used to *prove* a refactor changed nothing (or changed exactly what was intended and nothing else). Read the protocol comment at the top of that file before using it — it freezes `Math.random`, must be run before-and-after in one sitting (hashes aren't stable across days), and a handful of "movers" are always false positives worth understanding, not chasing.
 
 ## 5 · Current status
 
-All of **Phase A (Foundations)**, the completed Phase B work through T8, and all of Phase C through T12 are done, in order:
+All of **Phase A (Foundations)**, the completed Phase B work through T8, all of Phase C, and Phase D through T13 are done, in order:
 
 | Ticket | What it did |
 |---|---|
@@ -67,10 +68,11 @@ All of **Phase A (Foundations)**, the completed Phase B work through T8, and all
 | T10 | Added the official 96-passage current Doctrinal Mastery curriculum (24 per course), 13 Articles of Faith, the preserved 100-passage Heritage Collection, path onboarding, and key-phrase recall in both directions |
 | T11 | Added persistent custom passages and collections, personal towers that grow per passage, one escaping boundary across every user-text renderer, free/paid caps, and tiny/60-floor/120+-floor tower presentation |
 | T12 | Added the complete Christian track: 99 BSB/KJV passages across six 20-floor campaigns, translation/path pickers, seven cross-track shared identities, learner-facing track isolation, and intentional neutral-art/relic fallbacks |
+| T13 | Added idempotent learning events with bounded detail/lifetime aggregates, tokenizer-position Trouble Map and phrase drills, published SM-2 scheduling beneath the seal ladder, display-only recall strength, and non-punitive Eternal polish |
 
 Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its own entry in `ROADMAP.md` §8 — what changed, why, and the exact verification performed. Read the specific ticket's note before touching adjacent code; several tickets left deliberate, documented gaps (see §7 below) that the *next* person shouldn't accidentally "fix" without realizing why they were left alone.
 
-**Next up: T13 — learning events, trouble map, and graded scheduling.** Read T12's shipped note before choosing a passage boundary: `allPassages()` intentionally means the whole persistent catalog, while `activePassages()` is the current learner-facing path in recommendations, reviews, Study, Shelf, achievements, and Arena. T13 owns `recordLearningAttempt()`, bounded event history plus lifetime aggregates, tokenizer-position trouble data, a mutually exclusive Meaning / Trouble spots / Plain control, and an FSRS or SM-2 scheduling engine beneath the existing seal presentation.
+**Next up: T14 — cumulative chaining.** T13 deliberately records Prove It as recognition evidence but does not allow those per-chunk picks to move a due date. T14 should preserve that easier recognition mode and add production chaining—phrase 1, then 1→2, then 1→2→3—with the built text visible above. A completed production chain at `good`+ may count as seal evidence. Reuse `chunkVerse()`'s unchanged sequence and report the completed production question through `recordLearningAttempt()` rather than creating a second learning-data path.
 
 ## 6 · Conventions a new agent must respect
 

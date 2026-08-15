@@ -679,9 +679,17 @@ The six campaigns reuse the neutral Jerusalem and Tabernacle art kits with disti
 
 ### Phase D — The memory engine
 
-**T13 · Learning events, trouble map, graded scheduling**
+**T13 · Learning events, trouble map, graded scheduling** — ✅ **DONE**
 `recordLearningAttempt()` + per-passage aggregates; bounded log (200) with separate lifetime aggregates; `trouble` keyed by tokenizer word position (safe now that T3 shipped). Trouble Map as a **segmented control** with Smart Highlights — `Meaning | Trouble spots | Plain`, never both. Tap a trouble word → phrase drill of 3–5 words either side. Drive intervals from **FSRS or SM-2**, not an invented formula; keep `REVIEW_LADDER` as the *visual* skin (rung = stability bucket) so seals and the Eternal Seal are untouched. Keep a separate, clearly-labeled display "strength" — never conflate display with scheduling. Eternal Seal gains a non-punitive `nextPolishAt` (~180 days); missing it never cracks the seal.
 **DoD** — one aggregate update per settled question · trouble positions match real words including repeats · next interval varies by grade · Trouble Map and Meaning never render together.
+
+*Shipped:* `js/00-learning.js` is the pure learning boundary: an idempotent `recordLearningAttempt()` writes one capped 200-event diagnostic log while updating uncapped lifetime and per-passage aggregates, exact tokenizer word-position trouble weights, and scheduling evidence. Recall Check (typed and accessible self-report), every settled Arena question, both key-phrase directions, Prove It chunks, and the new focused phrase drill all report through that boundary. Event IDs make re-rendering or a second settlement call harmless; generic recognition exercises update aggregates without fabricating a word position.
+
+The scheduler now follows the published SM-2 rules: 1- and 6-day opening intervals, E-Factor updates from the 0–5 response quality, a 1.3 floor, and a repetition reset after failed recall. `REVIEW_LADDER` remains presentation only—its rungs are stability-day buckets derived from SM-2, while `nextReviewAt` comes only from the scheduler. The nearby “Recall strength” percentage is explicitly labeled **display only** and is never read by scheduling. Eternal Seals remain permanent; activity only moves an optional `nextPolishAt` about 180 days out, and a missed polish never cracks or lowers them.
+
+Study now has one segmented `Meaning | Trouble spots | Plain` mode. Meaning uses Smart Highlights; Trouble spots uses only warm position-specific marks; Plain uses neither. Tapping a warm word opens a 3–5-word-per-side production drill with first-letter cues, exact normalized grading, repeated-word-safe position feedback, and clean/try-again feedback. The three displays cannot be layered together.
+
+*Verification:* new learning suite **24**, content **94**, tokenizer **89**, recall **86**, verification **41**, phrases **14**, and custom content **30**—**378 assertions total**, all green. Every JavaScript file passes `node --check`; `git diff --check` is clean. Live desktop and 390×844 browser QA covered the exclusive segmented modes, an empty Trouble Map, a real Prove It miss creating exactly three heated word positions, tap-to-open phrase practice, wrong and clean phrase submissions, display-strength updates, persistence through reload, and zero warnings/errors. Unit coverage includes the canonical SM-2 sequence and grade-dependent future intervals, minimum E-Factor, bounded-log/lifetime separation, duplicate-event idempotency, exact repeated-word positions, phrase windows, strength/scheduler isolation, and non-punitive Eternal polish.
 
 **T14 · Cumulative chaining** *(highest learning-per-line in this document)*
 Cumulative chaining — produce phrase 1, then 1→2, then 1→2→3 — is the strongest known technique for long verbatim text and it's absent. `chunkVerse()` (`:6754`) already produces the chunks and Prove It already walks them, but Prove It is *recognition*: pick from three (`:6862`). Convert it to **production** — first-letter or type each chunk with the built text visible above. Keep the shell, progress bar, and ceremony. Accepts as recall evidence.
@@ -716,7 +724,7 @@ Accounts; **three receipt sources resolving to one entitlement** — StoreKit, G
 
 ```js
 {
-  schemaVersion: 2,
+  schemaVersion: 4,
   track: "seminary",              // seminary | christian | family
   translation: "lds2013",
   startingCampaignId: "camp_retired_bom",
@@ -731,15 +739,17 @@ Accounts; **three receipt sources resolving to one entitlement** — StoreKit, G
       stage: 0, sealed: false, sealedAt: null,
       reviewLevel: 0, reviews: 0,
       nextReviewAt: null, lastReviewAt: null, nextPolishAt: null,
-      fsrs: { stability: 0, difficulty: 0, lapses: 0 },
+      srs: { algorithm:"sm2", repetitions:0, intervalDays:0,
+             easeFactor:2.5, stabilityDays:0, lastGrade:null,
+             lastReviewedAt:null, dueAt:null },
       provenIt: false, hl: [],
-      attempts: { total:0, correct:0, recallTotal:0, recallCorrect:0, currentRecallStreak:0 },
-      trouble: { "<wordIndex>": { token, misses, successes, lastMissAt } },
-      strength: 0,                // display only — never drives scheduling
-      lastAttemptAt: null, lastQuality: null
+      learning: { total:0, correct:0, byGrade:{}, byMode:{},
+                  firstAt:null, lastAt:null, lastAttemptId:null },
+      trouble: { "<wordIndex>": { misses, successes, weight, lastAt } }
     }
   },
   learningLog: [],                // max 200
+  learningLifetime: { total:0, correct:0, byGrade:{}, byMode:{}, firstAt:null, lastAt:null },
   dailyPlan:    { date: "YYYY-MM-DD", tasks: [] },
   dailyRewards: { date: "YYYY-MM-DD", claimed: {} },
   climb: { "<campaignId>": ["<passageId>", …] },

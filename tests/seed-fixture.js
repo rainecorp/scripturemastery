@@ -14,7 +14,7 @@
     nextReviewAt: now + offDays*D, provenIt: lvl > 1
   });
   const st = {
-    schemaVersion:3, track:"seminary", translation:"lds2013", startingCampaignId:"camp_dm_bom",
+    schemaVersion:4, track:"seminary", translation:"lds2013", startingCampaignId:"camp_dm_bom",
     onboardingComplete:true, onboardingChoice:"seminary",
     xp:1240, streak:6, bestStreak:9, lastDay:new Date().toDateString(),
     shields:1, shares:2, resealsTotal:5, sound:true, achv:{unlocked:{}},

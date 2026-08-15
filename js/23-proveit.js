@@ -60,7 +60,8 @@ function chunkVerse(text){
 function openProveIt(v){
   const chunks = chunkVerse(v.text);
   if(chunks.length < 2){ showToast("This verse is too short for Prove It."); return; }
-  proveState = { v, chunks, builtIndex:0, misses:0, feedback:"", locked:false };
+  proveState = { v, chunks, builtIndex:0, misses:0, chunkMisses:0, feedback:"", locked:false,
+    runId:`prove:${v.id}:${Date.now()}:${Math.random().toString(36).slice(2,7)}` };
   renderProveIt();
 }
 function closeProveIt(){
@@ -147,14 +148,24 @@ function renderProveIt(){
         if(proveState.locked) return;
         const val=decodeURIComponent(btn.dataset.opt);
         if(val===chunks[proveState.builtIndex]){
+          const start=chunks.slice(0,proveState.builtIndex).reduce((n,c)=>n+wordCount(c),0);
+          const positions=tokenWords(chunks[proveState.builtIndex]).map((_,i)=>start+i);
+          recordLearningAttempt(state,v.id,{
+            id:`${proveState.runId}:${proveState.builtIndex}`,
+            mode:"proveItChunk",
+            grade:proveState.chunkMisses?"hard":"good",
+            correct:true,
+            troublePositions:proveState.chunkMisses?positions:[],
+            attemptedPositions:positions
+          },{wordCount:wordCount(v.text),schedule:false,eternal:isEternal(state.progress[v.id])});
           proveState.locked=true; btn.classList.add("correct"); SFX.pick();
           const opts=el.querySelector(".prove-options");
           if(opts) opts.classList.add("resolving");
           el.querySelectorAll(".prove-opt").forEach(b=>b.disabled=true);
           state.xp+=3; saveState();
-          setTimeout(()=>{ proveState.builtIndex++; proveState.feedback=""; proveState.locked=false; renderProveIt(); },95);
+          setTimeout(()=>{ proveState.builtIndex++; proveState.chunkMisses=0; proveState.feedback=""; proveState.locked=false; renderProveIt(); },95);
         }else{
-          proveState.misses++; proveState.feedback=proveState.misses===1?"Not quite. Follow the meaning and rhythm of the sentence.":"Look at the final words you completed, then test which option connects naturally.";
+          proveState.misses++; proveState.chunkMisses++; proveState.feedback=proveState.misses===1?"Not quite. Follow the meaning and rhythm of the sentence.":"Look at the final words you completed, then test which option connects naturally.";
           SFX.wrong(); btn.classList.add("wrong");
           const fb=document.getElementById("proveFeedback"); if(fb) fb.textContent=proveState.feedback;
           setTimeout(()=>btn.classList.remove("wrong"),420);

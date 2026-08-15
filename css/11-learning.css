@@ -1,0 +1,25 @@
+/* T13 · graded scheduling, segmented study display, and Trouble Map */
+.schedule-label{color:#9db4d6;font-size:11px;font-weight:800;margin-left:4px}
+.display-strength{margin-top:6px;color:#b7c8e4;font-size:10.5px;font-weight:850;letter-spacing:.035em}
+.display-strength span{margin-left:4px;padding:2px 6px;border:1px solid rgba(148,163,184,.22);border-radius:999px;color:#8194b1;font-size:8.5px;text-transform:uppercase;letter-spacing:.09em}
+.study-mode-switch{display:grid;grid-template-columns:repeat(3,1fr);max-width:440px;margin:12px auto 8px;padding:4px;border:1px solid rgba(148,163,184,.2);border-radius:13px;background:rgba(7,14,29,.58);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+.study-mode{min-height:38px;padding:8px 10px;border:0;border-radius:9px;background:transparent;color:#8fa5c5;font-family:inherit;font-size:11px;font-weight:800;line-height:1.15;letter-spacing:.025em;cursor:pointer;transition:background .16s,color .16s,box-shadow .16s}
+.study-mode:hover{color:#d8e5f7}
+.study-mode.active{background:linear-gradient(135deg,rgba(111,76,196,.5),rgba(39,87,147,.48));box-shadow:0 2px 10px rgba(0,0,0,.2),inset 0 0 0 1px rgba(196,181,253,.2);color:#fff}
+.trouble-hint{color:#d8b7a4}
+.verse-text .trouble-word{position:relative;background:rgba(244,114,71,var(--trouble-alpha,.2));box-shadow:inset 0 -2px rgba(251,146,60,.62);border-radius:4px;cursor:pointer;transition:filter .15s,transform .15s}
+.verse-text .trouble-word:hover,.verse-text .trouble-word:focus{filter:brightness(1.22);transform:translateY(-1px)}
+.verse-text .trouble-word::after{content:"";position:absolute;left:20%;right:20%;bottom:-3px;height:2px;border-radius:2px;background:#fb923c;opacity:.8}
+.trouble-drill{max-width:680px;margin:12px auto 8px;padding:15px;border:1px solid rgba(251,146,60,.3);border-radius:15px;background:linear-gradient(145deg,rgba(57,30,23,.72),rgba(17,24,39,.92));box-shadow:0 14px 34px rgba(0,0,0,.22)}
+.trouble-drill-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.trouble-drill-head span{display:block;color:#fb923c;font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+.trouble-drill-head strong{display:block;margin-top:3px;color:#f2e8e1;font-size:12px}
+.trouble-close{width:30px;height:30px;border:1px solid rgba(255,255,255,.13);border-radius:9px;background:rgba(0,0,0,.18);color:#b7c4d8;font-size:20px;cursor:pointer}
+.trouble-cue{margin:15px 0 11px;padding:12px;border-radius:10px;background:rgba(2,6,23,.42);color:#fed7aa;font:800 15px/1.7 Georgia,serif;letter-spacing:.035em;text-align:center}
+.trouble-form label{display:block;margin-bottom:5px;color:#9fb1cb;font-size:10px;font-weight:850}
+.trouble-form>div{display:flex;gap:8px}
+.trouble-form input{min-width:0;flex:1;padding:10px 12px;border:1px solid rgba(148,163,184,.28);border-radius:9px;outline:none;background:rgba(2,6,23,.64);color:#f8fafc;font-family:inherit;font-size:13px;font-weight:700}
+.trouble-form input:focus{border-color:#fb923c;box-shadow:0 0 0 3px rgba(251,146,60,.12)}
+.trouble-feedback{margin-top:10px;padding:9px 11px;border-radius:9px;font-size:11px;color:#fbd3bc;background:rgba(154,52,18,.22)}
+.trouble-feedback.ok{color:#bbf7d0;background:rgba(21,128,61,.2)}
+@media(max-width:560px){.study-mode{font-size:10px;padding:7px 4px}.trouble-form>div{align-items:stretch;flex-direction:column}.schedule-label{display:block;margin:5px 0 0}.display-strength{text-align:left}}

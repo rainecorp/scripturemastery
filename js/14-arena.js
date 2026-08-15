@@ -217,9 +217,11 @@ function buildArenaQuestion(v, type, diffCfg){
     );
     q.options = shuffleArr([correctEnd].concat(distract));
     q.correctEnd = correctEnd;
+    q.finishStart = cut;
   } else if(type==="buildVerse"){
     q.chunks = chunkVerse(v.text);
     q.builtIndex = 0;
+    q.buildMissPositions = [];
   } else if(type==="fillBlank"){
     /* q.words is the DISPLAY stream (punctuation included, whitespace not) so
        the sentence still reads correctly; q.blankIndex is a WORD position.
@@ -430,8 +432,38 @@ function scoreForType(type){
   if(type==="buildVerse" || type==="timedRecall" || type==="wordScramble" || type==="pairMatch") return 15;
   return 10;
 }
+function arenaLearningPositions(q,correct){
+  const all=tokenWords(q.v.text).map(t=>t.index);
+  let attempted=[];
+  if(q.type==="fillBlank") attempted=[q.blankIndex];
+  else if(q.type==="findError") attempted=[q.errorIndex].concat(q.firstMissIdx==null?[]:[q.firstMissIdx]);
+  else if(q.type==="wordScramble") attempted=q.scrTarget.map((_,i)=>q.scrStart+i);
+  else if(q.type==="finishVerse") attempted=all.filter(i=>i>=q.finishStart);
+  else if(q.type==="buildVerse" || q.type==="fullRecitation") attempted=all;
+  const trouble=[];
+  if(!correct) trouble.push(...attempted);
+  if(q.type==="findError" && q.retryUsed) trouble.push(q.errorIndex,q.firstMissIdx);
+  if(q.type==="wordScramble" && q.scrMiss) trouble.push(...attempted);
+  if(q.type==="buildVerse") trouble.push(...(q.buildMissPositions||[]));
+  return {attempted:[...new Set(attempted)],trouble:[...new Set(trouble.filter(Number.isInteger))]};
+}
 function settleAnswer(T, q, correct, opts){
   opts = opts || {};
+  if(q.settled) return;
+  q.settled=true;
+  const p=state.progress[q.v.id];
+  const wasDue=isDue(p);
+  const clean=correct&&!q.hinted&&!opts.penalty;
+  const grade=!correct?"again":(clean&&q.type==="fullRecitation"?"easy":(clean?"good":"hard"));
+  const positions=arenaLearningPositions(q,correct);
+  const eligible=!(q.type==="fullRecitation"&&q.hinted);
+  recordLearningAttempt(state,q.v.id,{
+    id:`arena:${T.sessionId}:${T.i}:${q.v.id}:${q.type}`,
+    mode:`arena:${q.type}`,
+    grade,correct,
+    troublePositions:positions.trouble,
+    attemptedPositions:positions.attempted
+  },{wordCount:wordCount(q.v.text),schedule:(wasDue&&eligible)||isEternal(p),eternal:isEternal(p)});
   q.ok = correct;
   if(q.timerHandle){ clearInterval(q.timerHandle); q.timerHandle=null; }
   campaignsForPassage(q.v.id).forEach(c=>T.campaignsTouched.add(c.id));
@@ -451,7 +483,6 @@ function settleAnswer(T, q, correct, opts){
     a.stats.byType[q.type].correct += 1;
     T.newQuestBadges = T.newQuestBadges.concat(bumpArenaQuests(a, def=>def.track==="type" && def.type===q.type, 1));
     T.newQuestBadges = T.newQuestBadges.concat(setArenaQuestProgress(a, def=>def.track==="streak", T.combo));
-    const p = state.progress[q.v.id];
     /* T6: Full Recitation is the self-report evidence type from
        ROADMAP.md §2.3's evidence table — "hard max, no peek". Peeking
        (q.hinted, set by the same spendArenaHeart() the hint button calls)
@@ -459,12 +490,12 @@ function settleAnswer(T, q, correct, opts){
        looked at the words, so it can no longer stand in for having
        recalled them. First-seal-via-self-report is already impossible
        here since isDue() requires p.sealed. */
-    if(isDue(p) && !(q.type==="fullRecitation" && q.hinted)){
-      const res = resealVerse(p);
+    if(wasDue && eligible){
+      const res = resealVerse(p,grade,{scheduled:true});
       T.score += res.xp;
       T.resealed.push(q.v);
       emitBridge(res.eternal ? "eternal" : "reseal", q.v, res.xp);
-    } else if(isDue(p) && q.type==="fullRecitation" && q.hinted){
+    } else if(wasDue && !eligible){
       setTimeout(()=> showToast(`👀 <strong>Peeked, so it didn't count toward re-sealing.</strong><br><span style="font-size:11.5px;color:#9db4d6;">Still earned Arena points for ${escHTML(q.v.ref)}. Recite it without looking to refresh the seal.</span>`, true), 250);
     }
     if(q.type==="fullRecitation" && !q.hinted && p.sealed){
