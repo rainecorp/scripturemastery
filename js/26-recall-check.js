@@ -325,8 +325,15 @@ function performSeal(v){
   const heartGain = refillArenaHearts(1);
   touchStreak();
   saveState();
-  if(heartGain) setTimeout(()=> showToast(`💛 Arena heart restored by sealing ${v.ref}.`, true), 2600);
-  playSealCeremony(v, climb.floor, climb.campaignId);
+  if(heartGain) setTimeout(()=> showToast(`💛 Arena heart restored by sealing ${escHTML(v.ref)}.`, true), 2600);
+  if(climb){
+    playSealCeremony(v, climb.floor, climb.campaignId);
+  }else{
+    /* Unassigned personal passages earn a real seal and relic without
+       pretending they built a floor in whichever builtin tower was open. */
+    render(); SFX.seal(); FX.rain({count:70});
+    showToast(`✦ <strong>${escHTML(v.ref)}</strong> sealed! Assign it to a personal tower whenever you want it to build a floor.`,true);
+  }
 }
 
 function performReseal(v, opts){
@@ -342,7 +349,7 @@ function performReseal(v, opts){
   render();
   if(res.eternal){
     SFX.fanfare(); FX.rain({count:120});
-    showToast(`♾️ <strong>ETERNAL SEAL</strong> · ${v.ref}<br><span style="color:#9db4d6;font-size:11.5px;">${relicFor(v).name} will never fade again. +${res.xp} XP${heartGain ? " · 💛 +1" : ""}</span>`, true);
+    showToast(`♾️ <strong>ETERNAL SEAL</strong> · ${escHTML(v.ref)}<br><span style="color:#9db4d6;font-size:11.5px;">${escHTML(relicFor(v).name)} will never fade again. +${res.xp} XP${heartGain ? " · 💛 +1" : ""}</span>`, true);
   } else {
     SFX.seal(); FX.rain({count:50});
     showToast(`✦ Re-sealed! Ladder rung ${res.lvl}/${REVIEW_LADDER.length}. +${res.xp} XP${heartGain ? " · 💛 +1" : ""} · ${nextReviewText(p)}${opts.selfReported ? " · self-reported" : ""}`);

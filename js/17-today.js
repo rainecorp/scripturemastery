@@ -189,14 +189,15 @@ function renderToday(){
   if(!started){
     const first = recommendedVerse();
     const campaign = campaignById(state.startingCampaignId) || activeCampaigns()[0];
+    const safeCampaign = safeCampaignHTML(campaign);
     const heroStats = towerStats(campaign.id);
     const campaignTotal = campaign.passageIds.length;
     html += `
       <div class="hero-start">
         <div class="hero-flex">
-          <div class="hero-tower${heroStats.sealed>=heroStats.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt="${campaign.name}"></div>
+          <div class="hero-tower${heroStats.sealed>=heroStats.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt="${safeCampaign.name}"></div>
           <div class="hero-copy">
-            <h2>Climb<br>${campaign.name}</h2>
+            <h2>Climb<br>${safeCampaign.name}</h2>
             <p>${campaignTotal} dark windows. ${campaignTotal} locked chests. Behind each one, a verse worth carrying forever. Memorize your first scripture — easy ones absolutely count — and the first window lights up with your relic shining inside.</p>
             <div class="hero-steps">
               <div class="hero-step"><div class="hs-icon">🧗</div><div class="hs-t">Climb</div><div class="hs-d">5 stages, each a little harder</div></div>
@@ -214,6 +215,8 @@ function renderToday(){
     const qr = relicFor(q);
     const shards = shardsFor(qp);
     const campaign = primaryCampaignForPassage(q.id, view.campaignId || state.startingCampaignId);
+    const safeCampaign = safeCampaignHTML(campaign);
+    const safeQ = safePassageHTML(q);
     const qs = towerStats(campaign.id);
     const qlog = climbLog(campaign.id);
     const choices = climbChoices(campaign.id);
@@ -223,10 +226,10 @@ function renderToday(){
         <div class="climb-now">
           <div class="cn-tower${qs.sealed>=qs.total?' full':''}"><img src="${towerArtPrefix(campaign)}assembled-preview.png" alt=""></div>
           <div class="cn-info">
-            <div class="cn-name">${campaign.name}</div>
+            <div class="cn-name">${safeCampaign.name}</div>
             <div class="cn-floor">Floor ${qlog.length+1} awaits · ${qs.sealed}/${qs.total} windows lit</div>
             <div class="ts-bar"><i style="width:${Math.round(qs.pct*100)}%"></i></div>
-            <div class="cn-current">${(qp.stage||0)>0 ? `⛏️ In progress: <strong>${q.ref}</strong> · ${qr.name} · ${shards}/5 shards` : `Suggested next: <strong>${q.ref}</strong> · ${qr.name}`}</div>
+            <div class="cn-current">${(qp.stage||0)>0 ? `⛏️ In progress: <strong>${safeQ.ref}</strong> · ${escHTML(qr.name)} · ${shards}/5 shards` : `Suggested next: <strong>${safeQ.ref}</strong> · ${escHTML(qr.name)}`}</div>
           </div>
         </div>
         <button class="btn primary" id="questBtn">${(qp.stage||0)>0 ? "Continue the climb ▸" : "Start this verse ▸"}</button>
@@ -236,13 +239,14 @@ function renderToday(){
             const d = difficultyForVerse(c.v);
             const cp = state.progress[c.v.id];
             const cStarted = (cp.stage||0) > 0;
+            const safeV = safePassageHTML(c.v);
             return `
-              <div class="choice-card ${c.cls}" data-id="${c.v.id}">
-                <div class="cc-tag">${c.tag}</div>
+              <div class="choice-card ${c.cls}" data-id="${safeV.id}">
+                <div class="cc-tag">${escHTML(c.tag)}</div>
                 ${relicHTML(c.v, 62)}
                 <div class="cc-info">
-                  <div class="cc-ref">${c.v.ref}</div>
-                  <div class="cc-theme">${c.v.topic}</div>
+                  <div class="cc-ref">${safeV.ref}</div>
+                  <div class="cc-theme">${safeV.topic}</div>
                   <div class="cc-meta">${d.emoji} ${d.label} · ${d.words} words${cStarted ? ` · ${shardsFor(cp)}/5 shards` : ""}</div>
                 </div>
               </div>`;
@@ -258,12 +262,13 @@ function renderToday(){
       ${due.length ? due.slice(0,6).map(v=>{
         const p = state.progress[v.id];
         const r = relicFor(v);
+        const safeV = safePassageHTML(v);
         return `
-          <div class="review-item" data-id="${v.id}">
+          <div class="review-item" data-id="${safeV.id}">
             ${relicHTML(v, 46)}
             <div class="ri-info">
-              <div class="ri-ref">${v.ref}</div>
-              <div class="ri-name">${r.name}</div>
+              <div class="ri-ref">${safeV.ref}</div>
+              <div class="ri-name">${escHTML(r.name)}</div>
             </div>
             ${condBadgeHTML(p)}
             <div class="ri-go">Re-seal ▸</div>
@@ -325,12 +330,13 @@ function renderToday(){
     <div class="home-card">
       <h3><span class="spark">🗼</span> Current Seminary Paths</h3>
       <div class="tower-strip">
-        ${activeCampaigns().filter(campaign=>campaign.group !== "retired").map(campaign=>{
+        ${activeCampaigns().filter(campaign=>["doctrinal","articles"].includes(campaign.group)).map(campaign=>{
           const s = towerStats(campaign.id);
+          const safeCampaign = safeCampaignHTML(campaign);
           return `
-            <div class="tstrip" data-campaign="${campaign.id}" style="--thue:${campaign.hue}">
+            <div class="tstrip" data-campaign="${safeCampaign.id}" style="--thue:${campaign.hue}">
               <div class="ts-info">
-                <div class="ts-name">${campaign.name}</div>
+                <div class="ts-name">${safeCampaign.name}</div>
                 <div class="ts-count">${s.sealed}/${s.total} floors sealed${s.due?` · ${s.due} fading`:''}</div>
                 <div class="ts-bar"><i style="width:${Math.round(s.pct*100)}%"></i></div>
               </div>
@@ -348,7 +354,7 @@ function renderToday(){
     <div class="home-card">
       <h3><span class="spark">🏺</span> The Relic Shelf</h3>
       ${recent.length
-        ? `<div class="shelf-strip">${recent.map(v=>`<div class="shelf-strip-item" data-id="${v.id}">${relicHTML(v,46)}</div>`).join("")}</div>
+        ? `<div class="shelf-strip">${recent.map(v=>`<div class="shelf-strip-item" data-id="${safePassageHTML(v).id}">${relicHTML(v,46)}</div>`).join("")}</div>
            <div class="qalt" id="shelfGo">Visit the trophy room ▸</div>`
         : `<div class="all-lit">Your shelf is empty — every relic still waits in the dark. Seal your first verse to claim one.</div>
            <button class="btn" id="shelfGo" style="margin-top:10px;">🏺 Go to the Relic Shelf ▸</button>`}

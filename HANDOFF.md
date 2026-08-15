@@ -40,16 +40,17 @@ node tests/recall.test.js
 node tests/verify.test.js
 node tests/content.test.js
 node tests/phrases.test.js
+node tests/custom.test.js
 ```
-These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c), content/tower contracts (T9/T10), and T10's bidirectional key-phrase cards. They pass today (**88 + 86 + 38 + 67 + 14 = 293 assertions**).
+These cover the canonical tokenizer (T3), Recall Check engine (T5), text-verification metadata (T4b/T4c), content/tower contracts (T9/T10), T10's bidirectional key-phrase cards, and T11's custom-content, escaping, entitlement, and tall-tower contracts. They pass today (**88 + 86 + 38 + 67 + 14 + 30 = 323 assertions**).
 
-**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`, `js/00-phrases.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, onboarding, and campaign UI behavior — is verified in the real browser app with the fixtures. `tests/onboarding-fixture.html` opens a true first run; `tests/seed-fixture.html` opens the schema-current mid-progress state. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
+**What is *not* Node-testable, and why:** `js/03-state.js` and most of the other split files are classic `<script>` files with heavy ambient dependencies (`state`, `SFX`, DOM globals) — they were never written to be `require()`-able. Pure tier-00 files (`js/00-content.js`, `js/00-custom.js`, `js/00-html.js`, `js/00-tower-geometry.js`, `js/00-tokenize.js`, `js/00-verify.js`, `js/00-recall.js`, `js/00-phrases.js`) are dual-exported (`module.exports` and `SQ.*`) and safe to require directly in Node. Everything else — including storage, reward, migration, import/export, onboarding, and campaign UI behavior — is verified in the real browser app with the fixtures. `tests/onboarding-fixture.html` opens a true first run; `tests/seed-fixture.html` opens the schema-current mid-progress state. `tests/custom-fixture.html?floors=7` seeds the exact XSS regression passage and accepts `floors=10`, `60`, or `145` for cap and geometry checks. Don't fight the codebase's grain trying to make `03-state.js` importable in isolation.
 
 **Fingerprinting** (`tests/fingerprint.js`): a deterministic DOM + computed-style hash of every screen, used to *prove* a refactor changed nothing (or changed exactly what was intended and nothing else). Read the protocol comment at the top of that file before using it — it freezes `Math.random`, must be run before-and-after in one sitting (hashes aren't stable across days), and a handful of "movers" are always false positives worth understanding, not chasing.
 
 ## 5 · Current status
 
-All of **Phase A (Foundations)**, the completed Phase B work through T8, and the first Phase C ticket are done, in order:
+All of **Phase A (Foundations)**, the completed Phase B work through T8, and Phase C through T11 are done, in order:
 
 | Ticket | What it did |
 |---|---|
@@ -64,10 +65,11 @@ All of **Phase A (Foundations)**, the completed Phase B work through T8, and the
 | T8 | `state.schemaVersion` + a real migration runner, a timestamped recovery key so a corrupt save is never silently lost, and pure `exportProgress`/`previewProgressImport`/`applyProgressImport` functions |
 | T9 | Replaced volume-keyed content with opaque passage IDs and Passage/Campaign/Track packs; campaign-keyed state/Arena; tower height derived from campaign length |
 | T10 | Added the official 96-passage current Doctrinal Mastery curriculum (24 per course), 13 Articles of Faith, the preserved 100-passage Heritage Collection, path onboarding, and key-phrase recall in both directions |
+| T11 | Added persistent custom passages and collections, personal towers that grow per passage, one escaping boundary across every user-text renderer, free/paid caps, and tiny/60-floor/120+-floor tower presentation |
 
 Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its own entry in `ROADMAP.md` §8 — what changed, why, and the exact verification performed. Read the specific ticket's note before touching adjacent code; several tickets left deliberate, documented gaps (see §7 below) that the *next* person shouldn't accidentally "fix" without realizing why they were left alone.
 
-**Next up: T11 — Custom passages + custom towers.** Read the T11 ticket and §4 before editing. User-authored text must be escaped everywhere before any custom passage can render; the required malicious `<img … onerror=…>` test is part of the ticket, not cleanup for later. T11 also owns the special presentation for tiny and very tall custom towers and the free-tier limit of 10 custom passages. Do not start T12's Christian content while T11 is incomplete.
+**Next up: T12 — Christian track.** Read T11's shipped note before touching catalog, rendering, or tower code: custom content now travels through the same Passage/Campaign accessors as built-in packs, and `js/00-html.js` is the required rendering boundary. T12 owns BSB + KJV per passage, a translation picker, six starter campaigns, neutral tower-kit reuse with new hues, and a full audit for Seminary-specific language.
 
 ## 6 · Conventions a new agent must respect
 
@@ -84,7 +86,7 @@ Every one of these has a detailed `✅ DONE` / *Shipped* note directly under its
 - **T7's `finishArenaSession()` idempotency fix was defensive, not a fix for a live bug.** Both real call sites already guarded against double-invocation; the `sessionId`/`rewarded` fields were added because the ticket asked for them and because relying on a single `done` flag with other jobs was fragile, not because anything was observed to actually double-pay.
 - **Practice XP on a failing Recall Check attempt was deliberately *not* built** in T6, even though the ticket text mentions it — `state.dailyRewards` (T7) didn't exist yet when T6 shipped, and paying XP on every free, unlimited retry would have been exactly the kind of farm T7 was about to close. Revisit this once T7's ledger is stable if it's still wanted.
 - **Text sourcing is done, but not exhaustively human-reviewed.** All 158 canonical passages carry verification metadata and match the current LDS edition. The heritage 100 live in `data/text-sources.js`: 79 were checked via an automated text fetch and 21 via direct DOM reads after the fetch was caught silently normalizing curly quotes to straight ones. T10's 58 newly authored passages live in generated `data/text-sources-t10.js`; its extractor also byte-checked all 51 current-curriculum references shared with heritage. Treat "verified" as strong but not infallible; a human spot-check before a paid launch is still worth doing.
-- **T9 parameterized tower height; T11 still owns the custom-tower extremes.** The pure geometry is covered at 3/7/13/24/25/60/120 floors; current Doctrinal Mastery renders at 24, Articles at 13, and heritage at 25. Do not quietly fold custom passage editing, sub-four-floor art treatment, or the compressed 120+ floor view into another ticket; those are T11 scope, including its XSS requirement.
+- **The dedicated custom tower art kit is still owner-supplied.** T11 ships the complete mechanic with the neutral Restoration asset set, a purple personal-tower hue, and distinct framing. The roadmap's decision table explicitly says the owner will design the final plain “pioneer tower” kit; swap `towerArt.kit` in `customCampaignFromCollection()` when those five matching assets arrive. Do not block T12 or invent bespoke relic art for every custom passage.
 - **The official current Doctrinal Mastery table is 96 passages, not 100.** As retrieved on 2026-08-14 it has exactly 24 in each of four courses. `data/doctrinal-mastery-source.json` is the checked-in reference/phrase snapshot and `tools/build-t10-content.py` is the reproducible extractor. If the official page changes, let its count assertion fail loudly and review the diff—do not pad a course to 25 to fit old expectations.
 
 ## 8 · If you're a human handing this to an AI agent

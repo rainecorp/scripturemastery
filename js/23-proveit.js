@@ -79,13 +79,14 @@ function proveKeyHandler(e){
   }
 }
 function proveReaderHTML(chunks,builtIndex){
-  const complete=chunks.slice(0,builtIndex).join(" ");
-  const upcoming=chunks.slice(builtIndex).join(" ");
+  const complete=escHTML(chunks.slice(0,builtIndex).join(" "));
+  const upcoming=escHTML(chunks.slice(builtIndex).join(" "));
   return `${complete?`<span class="prove-complete">${complete}</span> `:""}<span class="prove-cursor" id="proveCursor" aria-label="next phrase"></span>${upcoming?` <span class="prove-upcoming">${upcoming}</span>`:""}`;
 }
 function renderProveIt(){
   const el = document.getElementById("proveIt");
   const {v,chunks,builtIndex}=proveState;
+  const safe=safePassageHTML(v);
   const done=builtIndex>=chunks.length;
   const pct=Math.round((builtIndex/chunks.length)*100);
   let options=[];
@@ -98,18 +99,18 @@ function renderProveIt(){
   el.innerHTML=`
     <div class="cer-backdrop" id="proveItBackdrop"></div>
     <div class="relic-pop-stage">
-      <div class="cer-stage prove-stage" role="dialog" aria-modal="true" aria-label="Prove It ${v.ref}">
+      <div class="cer-stage prove-stage" role="dialog" aria-modal="true" aria-label="Prove It ${safe.ref}">
         <button class="rp-close" id="proveItClose" aria-label="Close">✕</button>
         <div class="prove-head">
           <div class="cer-kicker">🧩 Prove It</div>
-          <div class="prove-title-row"><div class="prove-ref">${v.ref}</div><div class="prove-step">${builtIndex} of ${chunks.length}</div></div>
+          <div class="prove-title-row"><div class="prove-ref">${safe.ref}</div><div class="prove-step">${builtIndex} of ${chunks.length}</div></div>
           <div class="prove-progress" style="--pct:${pct}%"><i></i></div>
         </div>
         ${done?`
           <div class="prove-instruction">Complete scripture rebuilt in order</div>
           <div class="prove-finish">
             <div><div class="prove-finish-glyph">✦</div><div class="cer-name">Proven!</div><div class="cer-motto">You followed the scripture from beginning to end.</div></div>
-            <div class="prove-finish-text">${v.text}</div>
+            <div class="prove-finish-text">${safe.text}</div>
             <button class="btn primary cer-btn show" id="proveClose">Claim victory ▸</button>
           </div>
           <div></div>
@@ -119,7 +120,7 @@ function renderProveIt(){
           <div class="prove-action">
             <div class="prove-prompt">What comes next?</div>
             <div class="prove-options">
-              ${options.map((o,i)=>`<button class="btn prove-opt" data-key="${i+1}" data-opt="${encodeURIComponent(o)}">${o}</button>`).join("")}
+              ${options.map((o,i)=>`<button class="btn prove-opt" data-key="${i+1}" data-opt="${encodeURIComponent(o)}">${escHTML(o)}</button>`).join("")}
             </div>
             <div class="prove-feedback" id="proveFeedback">${proveState.feedback||""}</div>
             <div class="prove-tools">
@@ -174,7 +175,7 @@ function renderProveIt(){
     touchStreak();
     if(!p.provenIt){
       p.provenIt=true;
-      showToast(`🧩 <strong>${v.ref}</strong> proven! Its relic now glows on the shelf.${rewarded ? " +15 XP" : ""}`);
+      showToast(`🧩 <strong>${escHTML(v.ref)}</strong> proven! Its relic now glows on the shelf.${rewarded ? " +15 XP" : ""}`);
     } else if(rewarded){
       showToast(`🧩 Proven again! +15 XP`);
     } else {

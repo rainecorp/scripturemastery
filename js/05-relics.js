@@ -63,20 +63,21 @@ function openRelicPop(v){
     !p.sealed && !p.provenIt ? `<span class="tc-pill">${shardsFor(p)}/5 shards uncovered</span>` : ""
   ].filter(Boolean).join("");
   const scriptureLink = `https://www.churchofjesuschrist.org/study/scriptures?lang=eng&query=${encodeURIComponent(v.ref)}`;
+  const safe = safePassageHTML(v);
   pop.innerHTML = `
     <div class="cer-backdrop" id="relicPopBackdrop"></div>
     <div class="relic-pop-stage">
       <div class="relic-pop-card">
         <button class="rp-close" id="relicPopClose" aria-label="Close">✕</button>
         <div class="rp-relic">${relicHTML(v, 300)}</div>
-        <div class="rp-ref">${v.ref}</div>
-        <div class="rp-theme">${v.topic}</div>
+        <div class="rp-ref">${safe.ref}</div>
+        <div class="rp-theme">${safe.topic}</div>
         <div class="rp-status">${statusChips}</div>
         <div class="rp-text">"${numberedVerseText(v)}"</div>
         <div class="rp-btns">
           <button class="btn primary" id="relicPopStudy">${p.sealed ? "Review this verse ▸" : "Study this verse ▸"}</button>
           ${p.sealed ? `<button class="btn" id="relicPopShare">📣 Share this relic</button>` : ""}
-          <a class="rp-link" href="${scriptureLink}" target="_blank" rel="noopener noreferrer">Read ${v.ref} on ChurchofJesusChrist.org ↗</a>
+          ${v.source==="user"?"":`<a class="rp-link" href="${scriptureLink}" target="_blank" rel="noopener noreferrer">Read ${safe.ref} on ChurchofJesusChrist.org ↗</a>`}
         </div>
       </div>
     </div>`;

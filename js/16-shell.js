@@ -4,7 +4,7 @@
 /* =========================================================
    VIEW STATE + SHELL
    ========================================================= */
-let view = {tab:"today", filter:"gettingStarted", campaignId:null, passageId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, phraseRound:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
+let view = {tab:"today", filter:"gettingStarted", campaignId:null, passageId:null, stage:0, blanked:new Set(), editing:false, reviewMode:false, stageFor:null, trialRound:null, phraseRound:null, customOpen:false, customFormOpen:false, customEditingId:null, arenaSettingsOpen:false, arenaBadgesOpen:false, arenaStatsOpen:false, highlightMode:true, chainOpen:false};
 const app = document.getElementById("app");
 
 function chooseOnboardingPath(choice){

@@ -465,7 +465,7 @@ function settleAnswer(T, q, correct, opts){
       T.resealed.push(q.v);
       emitBridge(res.eternal ? "eternal" : "reseal", q.v, res.xp);
     } else if(isDue(p) && q.type==="fullRecitation" && q.hinted){
-      setTimeout(()=> showToast(`👀 <strong>Peeked, so it didn't count toward re-sealing.</strong><br><span style="font-size:11.5px;color:#9db4d6;">Still earned Arena points for ${q.v.ref}. Recite it without looking to refresh the seal.</span>`, true), 250);
+      setTimeout(()=> showToast(`👀 <strong>Peeked, so it didn't count toward re-sealing.</strong><br><span style="font-size:11.5px;color:#9db4d6;">Still earned Arena points for ${escHTML(q.v.ref)}. Recite it without looking to refresh the seal.</span>`, true), 250);
     }
     if(q.type==="fullRecitation" && !q.hinted && p.sealed){
       const T2 = view.trialRound;

@@ -34,7 +34,7 @@ function renderTrials(){
 function renderArenaSetup(){
   const body = document.getElementById("body");
   const a = ensureArena();
-  const campaigns = activeCampaigns();
+  const campaigns = activeCampaigns().filter(c=>c.passageIds.length);
   const due = dueReviews().length;
   const campaignLabel = a.filters.campaigns.length===campaigns.length
     ? "All campaigns"
@@ -132,7 +132,7 @@ function renderArenaSetup(){
             <div class="mc-play">▶ Practice</div>
           </div>
         </div>
-        <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${statusLabel}</strong> · <strong>${campaignLabel}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
+        <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${escHTML(statusLabel)}</strong> · <strong>${escHTML(campaignLabel)}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
       </div>
 
       <div class="arena-card" style="margin-bottom:16px; text-align:left;">
@@ -172,7 +172,7 @@ function renderArenaSetup(){
         <div class="af-section">
           <div class="af-title">Step 2 · Which campaign(s)</div>
           <div class="af-row" id="afCampaigns">
-            ${campaigns.map(c=>`<button class="af-chip ${a.filters.campaigns.includes(c.id)?'active':''}" data-campaign="${c.id}">${c.shortName}</button>`).join("")}
+            ${campaigns.map(c=>`<button class="af-chip ${a.filters.campaigns.includes(c.id)?'active':''}" data-campaign="${safeCampaignHTML(c).id}">${safeCampaignHTML(c).shortName}</button>`).join("")}
           </div>
         </div>
         <div class="af-section">
@@ -192,9 +192,10 @@ function renderArenaSetup(){
               const mastery = a.campaignMastery[campaign.id];
               const doneAreas = mastery.areas.filter(Boolean).length;
               const s = towerStats(campaign.id);
+              const safe = safeCampaignHTML(campaign);
               return `
-                <div class="arena-book-card" data-campaign="${campaign.id}" style="--thue:${campaign.hue}">
-                  <div class="abc-name">${campaign.icon} ${campaign.shortName}</div>
+                <div class="arena-book-card" data-campaign="${safe.id}" style="--thue:${campaign.hue}">
+                  <div class="abc-name">${safe.icon} ${safe.shortName}</div>
                   <div class="abc-sub">${doneAreas}/5 areas · ${s.sealed}/${s.total} mastered</div>
                   <div class="abc-areas">${mastery.areas.map(d=>`<div class="abc-area-dot ${d?'done':''}"></div>`).join("")}</div>
                 </div>`;
@@ -384,7 +385,7 @@ function renderArenaSession(){
           <div class="ta-combo ${T.combo>1?'hot':''}">🔥 ×${T.combo}</div>
         </div>
         ${isBlitz ? `<div class="ta-timer-wrap blitz-track"><span class="ta-timer-bar" id="blitzTimerBar" style="width:${(blitzLeft/(BLITZ_SECONDS*1000))*100}%; transition:none;"></span></div>` : ""}
-        <div class="tc-pill" style="margin-bottom:10px;">${modeLabel} · ${ARENA_TYPE_LABEL[q.type]}</div>
+        <div class="tc-pill" style="margin-bottom:10px;">${escHTML(modeLabel)} · ${ARENA_TYPE_LABEL[q.type]}</div>
         ${questHudHTML(T)}
         ${arenaHeartsHTML()}
         ${innerHTML}
@@ -474,18 +475,18 @@ function renderArenaSession(){
 
   if(q.type==="text2ref" || q.type==="ref2text" || q.type==="theme2ref" || q.type==="timedRecall"){
     const optLabel = (x)=>{
-      if(q.type==="ref2text") return `<span class="to-text">"${trialSnippet(x.text,16)}"</span>`;
-      if(q.type==="theme2ref") return `<span class="to-ref">${x.ref}</span><span class="to-theme">Choose the matching reference</span>`;
-      if(q.type==="timedRecall") return `<span class="to-ref">${x.ref}</span><span class="to-theme">Recall under pressure</span>`;
-      return `<span class="to-ref">${x.ref}</span>`;
+      if(q.type==="ref2text") return `<span class="to-text">"${escHTML(trialSnippet(x.text,16))}"</span>`;
+      if(q.type==="theme2ref") return `<span class="to-ref">${escHTML(x.ref)}</span><span class="to-theme">Choose the matching reference</span>`;
+      if(q.type==="timedRecall") return `<span class="to-ref">${escHTML(x.ref)}</span><span class="to-theme">Recall under pressure</span>`;
+      return `<span class="to-ref">${escHTML(x.ref)}</span>`;
     };
     let prompt;
     if(q.type==="text2ref" || q.type==="timedRecall"){
-      prompt = `<div class="tq-kicker">Whose words are these?</div><div class="tq-text">"${trialSnippet(q.v.text,26)}"</div>`;
+      prompt = `<div class="tq-kicker">Whose words are these?</div><div class="tq-text">"${escHTML(trialSnippet(q.v.text,26))}"</div>`;
     } else if(q.type==="ref2text"){
-      prompt = `<div class="tq-kicker">How does it begin?</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.topic}</div>`;
+      prompt = `<div class="tq-kicker">How does it begin?</div><div class="tq-ref">${escHTML(q.v.ref)}</div><div class="tq-theme">${escHTML(q.v.topic)}</div>`;
     } else {
-      prompt = `<div class="tq-kicker">Which scripture teaches…</div><div class="tq-text">"${q.v.topic}"</div>`;
+      prompt = `<div class="tq-kicker">Which scripture teaches…</div><div class="tq-text">"${escHTML(q.v.topic)}"</div>`;
     }
     shell(`
       ${q.type==="timedRecall" ? `<div class="ta-timer-wrap"><span class="ta-timer-bar" id="taTimerBar" style="width:100%"></span></div>` : ""}
@@ -530,8 +531,8 @@ function renderArenaSession(){
     }
   } else if(q.type==="finishVerse"){
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Finish the verse</div><div class="tq-text">"${q.lead} …"</div></div>
-      <div class="ta-opts">${q.options.map((o,i)=>`<button class="t-opt" data-i="${i}"><span class="to-text">${o}</span></button>`).join("")}</div>
+      <div class="tq-card"><div class="tq-kicker">Finish the verse</div><div class="tq-text">"${escHTML(q.lead)} …"</div></div>
+      <div class="ta-opts">${q.options.map((o,i)=>`<button class="t-opt" data-i="${i}"><span class="to-text">${escHTML(o)}</span></button>`).join("")}</div>
       ${withHint()}
     `);
     body.querySelectorAll(".t-opt").forEach(btn=>{
@@ -562,10 +563,10 @@ function renderArenaSession(){
     /* q.words is the display stream; the blank is keyed on WORD index, so
        punctuation-only tokens can never be blanked out. */
     const shown = q.words.map(t => t.isWord && t.index===q.blankIndex
-      ? `<span class="blank-slot">&nbsp;</span>` : t.raw).join(" ");
+      ? `<span class="blank-slot">&nbsp;</span>` : escHTML(t.raw)).join(" ");
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Fill in the blank</div><div class="tq-lead">${shown}</div><div class="tq-theme" style="margin-top:6px;">${q.v.ref}</div></div>
-      <div class="ta-opts">${q.options.map((o,i)=>`<button class="t-opt" data-i="${i}"><span class="to-text">${o}</span></button>`).join("")}</div>
+      <div class="tq-card"><div class="tq-kicker">Fill in the blank</div><div class="tq-lead">${shown}</div><div class="tq-theme" style="margin-top:6px;">${escHTML(q.v.ref)}</div></div>
+      <div class="ta-opts">${q.options.map((o,i)=>`<button class="t-opt" data-i="${i}"><span class="to-text">${escHTML(o)}</span></button>`).join("")}</div>
       ${withHint()}
     `);
     body.querySelectorAll(".t-opt").forEach(btn=>{
@@ -595,8 +596,8 @@ function renderArenaSession(){
   } else if(q.type==="findError"){
     shell(`
       <div class="tq-card"><div class="tq-kicker">Tap the word that doesn't belong</div><div class="fe-words">${q.words.map(t => t.isWord
-        ? `<span class="fe-word ${q.retryUsed && Number(q.firstMissIdx)===t.index ? "picked-wrong used" : ""}" data-i="${t.index}">${t.raw}</span>`
-        : t.raw).join(" ")}</div><div class="tq-theme" style="margin-top:6px;">${q.v.ref}</div></div>
+        ? `<span class="fe-word ${q.retryUsed && Number(q.firstMissIdx)===t.index ? "picked-wrong used" : ""}" data-i="${t.index}">${escHTML(t.raw)}</span>`
+        : escHTML(t.raw)).join(" ")}</div><div class="tq-theme" style="margin-top:6px;">${escHTML(q.v.ref)}</div></div>
       ${q.retryUsed ? `<div class="fe-retry" id="feRetry">💛 Not that one — you get <strong>one more try</strong>. Look closer…</div>` : `<div class="fe-lives">❤️❤️ two tries</div>`}
     `);
     body.querySelectorAll(".fe-word").forEach(sp=>{
@@ -642,13 +643,13 @@ function renderArenaSession(){
     shell(`
       <div class="tq-card">
         <div class="tq-kicker">Untangle the verse · tap the words in order</div>
-        <div class="tq-theme">${q.v.ref}${q.scrStart>0 ? " · starting mid-verse…" : ""}</div>
+        <div class="tq-theme">${escHTML(q.v.ref)}${q.scrStart>0 ? " · starting mid-verse…" : ""}</div>
         ${q.scrLead ? `<div class="scr-context"><strong>Previous words</strong><span class="fade-tail">${escHTML(q.scrLead)}</span></div>` : `<div class="scr-context"><strong>Start here</strong><span class="fade-tail">Begin at the first word of this verse.</span></div>`}
-        <div class="scr-built">${q.scrTarget.slice(0,q.scrNext).map(w=>`<span class="pv-chip done">${w}</span>`).join(" ")}${q.scrNext<q.scrTarget.length ? `<span class="pv-chip next">?</span>` : ""}</div>
+        <div class="scr-built">${q.scrTarget.slice(0,q.scrNext).map(w=>`<span class="pv-chip done">${escHTML(w)}</span>`).join(" ")}${q.scrNext<q.scrTarget.length ? `<span class="pv-chip next">?</span>` : ""}</div>
       </div>
       <div class="scr-hint-row"><button class="hint-btn" id="scrHeartHint" ${arenaHeartCount()<=0?'disabled':''}>💛 Place next word (${arenaHeartCount()}/${ARENA_HEART_MAX})</button></div>
       <div class="scr-pool">
-        ${remaining.map(c=>`<button class="scr-chip" data-k="${c.k}">${c.w}</button>`).join("")}
+        ${remaining.map(c=>`<button class="scr-chip" data-k="${c.k}">${escHTML(c.w)}</button>`).join("")}
       </div>
     `);
     const finishOrContinueScramble = (anchor)=>{
@@ -700,10 +701,10 @@ function renderArenaSession(){
         <div class="tq-kicker">Match each reference to its teaching</div>
         <div class="pm-grid">
           <div class="pm-col">
-            ${q.pairLeft.map(o=>`<button class="pm-chip pm-l ${q.pairDone[o.id]?'matched':''} ${q.selL===o.id?'sel':''}" data-id="${o.id}"><span class="to-ref" style="font-size:13px;">${o.label}</span></button>`).join("")}
+            ${q.pairLeft.map(o=>`<button class="pm-chip pm-l ${q.pairDone[o.id]?'matched':''} ${q.selL===o.id?'sel':''}" data-id="${escHTML(o.id)}"><span class="to-ref" style="font-size:13px;">${escHTML(o.label)}</span></button>`).join("")}
           </div>
           <div class="pm-col">
-            ${q.pairRight.map(o=>`<button class="pm-chip pm-r ${q.pairDone[o.id]?'matched':''}" data-id="${o.id}"><span class="to-theme" style="font-size:11.5px;">${o.label}</span></button>`).join("")}
+            ${q.pairRight.map(o=>`<button class="pm-chip pm-r ${q.pairDone[o.id]?'matched':''}" data-id="${escHTML(o.id)}"><span class="to-theme" style="font-size:11.5px;">${escHTML(o.label)}</span></button>`).join("")}
           </div>
         </div>
         <div class="pm-foot">${matchedN}/3 matched${q.pmMiss ? ` · ${q.pmMiss} slip${q.pmMiss===1?"":"s"}` : ""}</div>
@@ -757,10 +758,10 @@ function renderArenaSession(){
       options = shuffleArr([correct].concat(distract));
     }
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Build the verse · ${q.v.ref}</div>
-        <div class="prove-built">${q.chunks.slice(0,q.builtIndex).map(c=>`<span class="pv-chip done">${c}</span>`).join(" ")}${done ? "" : `<span class="pv-chip next">?</span>`}</div>
+      <div class="tq-card"><div class="tq-kicker">Build the verse · ${escHTML(q.v.ref)}</div>
+        <div class="prove-built">${q.chunks.slice(0,q.builtIndex).map(c=>`<span class="pv-chip done">${escHTML(c)}</span>`).join(" ")}${done ? "" : `<span class="pv-chip next">?</span>`}</div>
       </div>
-      ${done ? "" : `<div class="prove-options">${options.map(o=>`<button class="btn prove-opt" data-opt="${encodeURIComponent(o)}">${o}</button>`).join("")}</div>`}
+      ${done ? "" : `<div class="prove-options">${options.map(o=>`<button class="btn prove-opt" data-opt="${encodeURIComponent(o)}">${escHTML(o)}</button>`).join("")}</div>`}
     `);
     const builtBox = body.querySelector(".prove-built");
     if(builtBox && builtBox.lastElementChild) builtBox.lastElementChild.scrollIntoView({block:"end", inline:"nearest"});
@@ -793,7 +794,7 @@ function renderArenaSession(){
     }
   } else if(q.type==="fullRecitation"){
     shell(`
-      <div class="tq-card"><div class="tq-kicker">Full recitation</div><div class="tq-ref">${q.v.ref}</div><div class="tq-theme">${q.v.topic}</div>
+      <div class="tq-card"><div class="tq-kicker">Full recitation</div><div class="tq-ref">${escHTML(q.v.ref)}</div><div class="tq-theme">${escHTML(q.v.topic)}</div>
         <p style="margin-top:10px;color:#b9aef2;font-size:12.5px;font-weight:700;">Recite the entire scripture aloud from memory, then be honest with yourself.</p>
       </div>
       ${q.peekOpen ? `<div class="recite-peek">"${numberedVerseText(q.v)}"</div>` : ``}
@@ -875,12 +876,12 @@ function renderArenaResults(){
         <div class="trr-item"><span>📈 Scriptures improved</span><span style="margin-left:auto;">${improved.length}</span></div>
         <div class="trr-item"><span>🏺 Scriptures mastered</span><span style="margin-left:auto;">${mastered.length}</span></div>
         <div class="trr-item"><span>💛 Hearts used</span><span style="margin-left:auto;">${T.hintsUsed}</span></div>
-        <div class="trr-item"><span>🗺️ Challenge</span><span style="margin-left:auto;text-align:right;">${challengeLine}</span></div>
+        <div class="trr-item"><span>🗺️ Challenge</span><span style="margin-left:auto;text-align:right;">${escHTML(challengeLine)}</span></div>
       </div>
       ${T.resealed.length ? `
         <div class="tr-resealed">
           <div class="trr-title">🕯️ Seals restored by your victory</div>
-          ${T.resealed.map(v=>`<div class="trr-item">${relicHTML(v, 40)}<span>${v.ref}</span></div>`).join("")}
+          ${T.resealed.map(v=>`<div class="trr-item">${relicHTML(v, 40)}<span>${escHTML(v.ref)}</span></div>`).join("")}
         </div>` : ""}
       ${T.newlyUnlocked.length ? `
         <div class="tr-resealed">

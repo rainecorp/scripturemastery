@@ -14,8 +14,10 @@ function allPassages(){
   return BUILTIN_PASSAGES.concat(custom);
 }
 function allCampaigns(){
-  const custom = (typeof state !== "undefined" && Array.isArray(state.customCampaigns))
-    ? state.customCampaigns : [];
+  /* Collections are the editable source of truth. Campaigns are derived so a
+     rename or membership edit cannot leave a second stale copy behind. */
+  const custom = (typeof state !== "undefined" && Array.isArray(state.collections))
+    ? customCampaignsFromCollections(state.collections) : [];
   return BUILTIN_CAMPAIGNS.concat(custom);
 }
 function allTracks(){ return BUILTIN_TRACKS.slice(); }
@@ -31,7 +33,8 @@ function activeCampaigns(trackId){
   if(!track) return [];
   const wanted = new Set(track.campaignIds);
   return allCampaigns()
-    .filter(c=>wanted.has(c.id) && c.status === "active")
+    .filter(c=>(wanted.has(c.id) || (c.source === "user" && c.track === track.id))
+      && (c.status === "active" || c.status === "custom"))
     .sort((a,b)=>(a.order||0)-(b.order||0));
 }
 function campaignPassages(campaignId){

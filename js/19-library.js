@@ -60,12 +60,13 @@ function popularPillHTML(v){
 function cardHTML(v){
   const p = state.progress[v.id];
   const diff = difficultyForVerse(v);
+  const safe=safePassageHTML(v);
   return `
-    <div class="card level-${diff.index} ${p.sealed ? 'sealed-card' : ''} ${isPopularVerse(v) ? 'popular-card' : ''}" data-id="${v.id}">
+    <div class="card level-${diff.index} ${p.sealed ? 'sealed-card' : ''} ${isPopularVerse(v) ? 'popular-card' : ''}" data-id="${safe.id}">
       ${popularBookmarkHTML(v)}
       <div class="difficulty-badge" title="${p.sealed ? 'Sealed' : `${diff.label} · ${diff.words} words`}">${p.sealed ? '✨' : diff.emoji}</div>
-      <div class="ref">${v.ref}</div>
-      <div class="theme">${v.topic}</div>
+      <div class="ref">${safe.ref}</div>
+      <div class="theme">${safe.topic}</div>
       <div class="stage-row">
         ${STAGES.map((s,i)=>`<div class="pip ${p.sealed?'sealed':(i<p.stage?'done':'')}"></div>`).join("")}
       </div>
@@ -73,9 +74,10 @@ function cardHTML(v){
     </div>`;
 }
 function renderLibrary(){
+  if(view.customOpen) return renderCustomContent();
   const body = document.getElementById("body");
   const selected = versesForCurrentFilter();
-  let html = "";
+  let html = `<div class="custom-launch"><div class="custom-launch-icon">🛠️</div><div><strong>Build a personal scripture tower</strong><span>Add your own passages, keep their wording exact, and grow a tower one floor at a time.</span></div><button class="btn primary" id="customOpen">My passages ▸</button></div>`;
   if(view.filter === "gettingStarted"){
     html += `<div class="getting-started-note">🌱 <strong>Getting Started</strong> shows up to 5 short, popular scriptures so the first memorization wins feel fast and encouraging.</div>`;
   }
@@ -90,12 +92,19 @@ function renderLibrary(){
       const ids = new Set(campaign.passageIds);
       const items = selected.filter(v=>ids.has(v.id) && !rendered.has(v.id));
       if(!items.length) return;
-      html += `<div class="campaign-group"><h2>${campaign.shortName}</h2><div class="verse-grid">`;
+      html += `<div class="campaign-group"><h2>${safeCampaignHTML(campaign).shortName}</h2><div class="verse-grid">`;
       items.forEach(v=>{ rendered.add(v.id); html += cardHTML(v); });
       html += `</div></div>`;
     });
+    const remaining=selected.filter(v=>!rendered.has(v.id));
+    if(remaining.length){
+      html += `<div class="campaign-group"><h2>My unassigned passages</h2><div class="verse-grid">`;
+      remaining.forEach(v=>{rendered.add(v.id);html+=cardHTML(v);});
+      html += `</div></div>`;
+    }
   }
   body.innerHTML = html;
+  document.getElementById("customOpen").onclick=()=>{view.customOpen=true;view.customFormOpen=false;view.customEditingId=null;renderCustomContent();window.scrollTo({top:0});};
   body.querySelectorAll(".card").forEach(c=>{
     c.onclick = ()=>{
       const p = state.progress[c.dataset.id];

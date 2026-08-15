@@ -48,6 +48,9 @@ function pickBlankSet(text, fraction){
    means a passage was edited after someone reviewed it. */
 function verificationNoteHTML(v){
   if(!SHOW_TEXT_VERIFICATION) return "";
+  if(v && v.source === "user"){
+    return `<div class="verify-note">📝 Personal wording — you supplied this text. Compare it with your source before memorizing.</div>`;
+  }
   const vr = verificationFor(v);
   if(vr.state === "verified"){
     return `<div class="verify-note ok" title="${escHTML(vr.detail)}">✓ ${escHTML(vr.label)} · ${escHTML(vr.rec.source)}</div>`;
@@ -66,6 +69,7 @@ function renderStudy(){
   const stage = view.stage;
   const diff = difficultyForVerse(v);
   const r = relicFor(v);
+  const safe=safePassageHTML(v);
   const due = isDue(p);
   const shards = shardsFor(p);
 
@@ -89,7 +93,7 @@ function renderStudy(){
       <div class="study-relic">
         ${relicHTML(v, 84)}
         <div class="sr-info">
-          <div class="sr-name">${r.name}</div>
+          <div class="sr-name">${escHTML(r.name)}</div>
           <div class="sr-tier" style="color:${diff.trim.trim}">${diff.trim.metal} relic · ${shards}/5 shards</div>
           <div class="sr-cond">${p.sealed ? `${condBadgeHTML(p)} <span style="color:#9db4d6;font-size:11px;font-weight:800;margin-left:4px;">${nextReviewText(p)}</span>` : `<span style="color:#9db4d6;font-size:11px;font-weight:800;">Each stage you pass reveals a shard</span>`}</div>
         </div>
@@ -98,9 +102,9 @@ function renderStudy(){
       ${due && view.reviewMode ? `<div class="review-banner">🕯️ <span>This seal is <strong>${sealCondition(p).label.toLowerCase()}</strong>. One honest recitation restores its shine and climbs the ladder toward an Eternal Seal.</span></div>` : ''}
 
       <div class="study-head">
-        <div class="ref">${v.ref}</div>
+        <div class="ref">${safe.ref}</div>
         ${popularPillHTML(v)}
-        <div class="theme">${v.topic} &nbsp;·&nbsp; ${v.book}</div>
+        <div class="theme">${safe.topic} &nbsp;·&nbsp; ${safe.book}</div>
         ${v.keyPhrase ? `<div class="study-key-phrase"><span>Key scripture phrase</span>${escHTML(v.keyPhrase)}</div>` : ""}
       </div>
       <div class="stage-label">${p.sealed ? '<span class="emoji">🏆</span><span>Sealed ✦</span>' : difficultyLabelForVerse(v)}</div>
@@ -185,7 +189,7 @@ function renderStudy(){
         SFX.correct(2);
         const sr = body.querySelector(".study-relic .relic");
         if(sr) FX.burstAt(sr, {count:22});
-        showToast(`✦ A shard breaks away! <strong>${r.name}</strong> · ${shardsFor(p)}/5 revealed${heartGain ? ` · 💛 +${heartGain}` : ""}`);
+        showToast(`✦ A shard breaks away! <strong>${escHTML(r.name)}</strong> · ${shardsFor(p)}/5 revealed${heartGain ? ` · 💛 +${heartGain}` : ""}`);
       } else if(rewarded){
         SFX.tap();
         showToast(`Nice review. +10 XP${heartGain ? ` · 💛 +${heartGain}` : ""}`);

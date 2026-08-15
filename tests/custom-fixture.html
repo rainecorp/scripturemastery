@@ -1,0 +1,8 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Seed custom tower fixture</title>
+<script src="custom-fixture.js"></script>
+<script>
+  const floors=new URLSearchParams(location.search).get("floors")||"7";
+  location.replace(`../index.html?fixture=custom&floors=${encodeURIComponent(floors)}&n=${Date.now()}`);
+</script>

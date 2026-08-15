@@ -18,19 +18,21 @@ function renderShelf(){
   activeCampaigns().forEach(campaign=>{
     const vs = campaignPassages(campaign.id);
     const c = vs.filter(v=>state.progress[v.id].sealed).length;
+    const safeCampaign=safeCampaignHTML(campaign);
     html += `
       <div class="shelf-room" style="--thue:${campaign.hue}">
-        <h3><span>${campaign.icon} ${campaign.name}</span><span class="sr-count">${c}/${vs.length} claimed</span></h3>
+        <h3><span>${safeCampaign.icon} ${safeCampaign.name}</span><span class="sr-count">${c}/${vs.length} claimed</span></h3>
         <div class="shelf-grid">
           ${vs.map((v,i)=>{
             const p = state.progress[v.id];
+            const safe=safePassageHTML(v);
             const cls = p.sealed ? "claimed" : ((p.stage||0)>0 ? "waking" : "dark");
             const fl = floorOf(v, campaign.id);
             return `
-              <div class="shelf-slot ${cls}" data-id="${v.id}" title="${v.topic}">
+              <div class="shelf-slot ${cls}" data-id="${safe.id}" title="${safe.topic}">
                 <div class="ss-num">${i+1}</div>
                 ${relicHTML(v, 58)}
-                <div class="ss-ref">${v.ref}</div>
+                <div class="ss-ref">${safe.ref}</div>
                 ${p.sealed
                   ? `<div class="ss-floor">${chestImg(fl||1, 15)} Floor ${fl||"?"} ${isEternal(p) ? "♾️" : (isDue(p) ? "🕯️" : "✦")}</div>`
                   : `<div class="ss-shards">${shardsFor(p)}/5 shards</div>`}

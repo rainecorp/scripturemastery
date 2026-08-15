@@ -229,11 +229,16 @@ function previewProgressImport(json){
   if(!Number.isFinite(incoming.xp) || incoming.xp < 0){
     return { ok:false, error:"The XP total in that file is invalid." };
   }
+  const customCheck = validateCustomContentPayload(incoming,{
+    passageIds:BUILTIN_PASSAGES.map(v=>v.id),campaignIds:BUILTIN_CAMPAIGNS.map(c=>c.id)
+  });
+  if(!customCheck.ok) return {ok:false,error:customCheck.error};
 
   const ids = Object.keys(incoming.progress);
+  const incomingCustom = new Map((incoming.customPassages||[]).map(v=>[v.id,v]));
   const sealedIds = ids.filter(id => incoming.progress[id] && incoming.progress[id].sealed);
   const sealedRefs = sealedIds
-    .map(id => { const v = passageById(id); return v ? v.ref : null; })
+    .map(id => { const v = passageById(id) || incomingCustom.get(id); return v ? v.ref : null; })
     .filter(Boolean);
 
   const summary = {
@@ -263,6 +268,10 @@ function previewProgressImport(json){
 function applyProgressImport(data){
   runMigrations(data);
   state = data;
+  if(!Array.isArray(state.customPassages)) state.customPassages = [];
+  if(!Array.isArray(state.collections)) state.collections = [];
+  state.customCampaigns = customCampaignsFromCollections(state.collections);
+  allPassages().forEach(v=>{ if(!state.progress[v.id]) state.progress[v.id]={stage:0,sealed:false}; });
   persistState();
   return true;
 }
@@ -490,6 +499,13 @@ runMigrations(state);
   def("collections", []);
   def("customPassages", []);
   def("customCampaigns", []);
+  def("entitlement", {tier:"free",source:null,expiresAt:null});
+  /* customCampaigns is an export/debug convenience, never a second editable
+     source of truth. Rebuild it from collections on every boot. */
+  const derivedCustomCampaigns = customCampaignsFromCollections(state.collections);
+  if(JSON.stringify(state.customCampaigns)!==JSON.stringify(derivedCustomCampaigns)){
+    state.customCampaigns=derivedCustomCampaigns; ch=true;
+  }
   if(state.lastDay === todayStr()){
     const iso = localISODate();
     if(!state.calendar[iso]){ state.calendar[iso] = {a:1}; ch = true; }
@@ -539,6 +555,9 @@ function floorOf(v, campaignId){
 }
 function recordClimb(v, preferredCampaignId){
   const campaigns = campaignsForPassage(v.id);
+  /* An unassigned personal passage can still be studied and sealed, but it
+     must never leak into the learner's current built-in campaign. */
+  if(!campaigns.length) return null;
   campaigns.forEach(campaign=>{
     const arr = state.climb[campaign.id] || (state.climb[campaign.id] = []);
     if(!arr.includes(v.id)) arr.push(v.id);

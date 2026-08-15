@@ -12,6 +12,7 @@ function playSealCeremony(v, floorN, campaignId){
   const campaign = primaryCampaignForPassage(v.id, campaignId);
   const r = relicFor(v);
   const d = difficultyForVerse(v);
+  const safe=safePassageHTML(v),safeCampaign=safeCampaignHTML(campaign);
   const art = (RELIC_IMAGES && r.designed)
     ? `<img class="cer-relic-img" src="relics/${v.id}.webp" alt="">`
     : `<div class="cer-relic-emoji">${r.emoji}</div>`;
@@ -26,11 +27,11 @@ function playSealCeremony(v, floorN, campaignId){
       </div>
       <div class="cer-text">
         <div class="cer-kicker">✦ Sealed · Chest ${floorN} unlocked ✦</div>
-        <div class="cer-name">${r.name}</div>
-        <div class="cer-motto">“${r.motto}”</div>
-        <div class="cer-ref">${v.ref} · ${d.trim.metal} relic · +50 XP</div>
+        <div class="cer-name">${escHTML(r.name)}</div>
+        <div class="cer-motto">“${escHTML(r.motto)}”</div>
+        <div class="cer-ref">${safe.ref} · ${d.trim.metal} relic · +50 XP</div>
       </div>
-      <button class="btn primary cer-btn" id="cerClimb">Climb ${campaign.name} ▸</button>
+      <button class="btn primary cer-btn" id="cerClimb">Climb ${safeCampaign.name} ▸</button>
       <div class="cer-skip" id="cerShare">📣 share this victory ▸</div>
       <div class="cer-skip" id="cerSkip">or place it on the shelf ▸</div>
     </div>`;
