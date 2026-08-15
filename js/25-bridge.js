@@ -59,6 +59,19 @@
           font:700 12.5px -apple-system,"Segoe UI",Roboto,sans-serif; padding:10px 14px;
           border-radius:999px; cursor:pointer; box-shadow:0 8px 24px rgba(0,0,0,.4);}
         @media(min-width:641px){ #savePill{bottom:18px;} }
+        /* D4 (ROADMAP.md section 8 "Defects found in flight", found in T14 QA):
+           every full-screen overlay in the app is a sibling .cer element
+           at z-index:80 -- Recall Check, Prove It, the seal ceremony,
+           relic/achievement/share pop. This pill sits above all of them
+           (z-index:120), so on a narrow viewport it doesn't just visually
+           cover whatever overlay content lands under its fixed
+           bottom-right position, it genuinely eats the tap. The app is
+           headed for iOS/Play too, where a blocked on-screen control is
+           the whole interaction, not a keyboard-only inconvenience.
+           Hiding the pill whenever any .cer is open is simpler and
+           safer than auditing every overlay's own z-index, and it covers
+           overlays added after this fix with no further changes. */
+        body:has(.cer.show) #savePill{ display:none; }
       </style>
       💾 Save your progress`;
     pill.onclick = ()=>{ location.href = USERNAMES_URL + "?claim=1"; };
