@@ -149,6 +149,84 @@ function bindCheckinCard(body){
   const ct = document.getElementById("ciChainToggle");
   if(ct) ct.onclick = ()=>{ view.chainOpen = !view.chainOpen; renderToday(); };
 }
+
+/* ---- the Daily Path (T16) ----
+   Replaces the old standalone "Fading Seals" card. Rescue and Climb are
+   required and drive the visible finish line; Strengthen and Victory Lap
+   are bonus, shown underneath and never counted against it. */
+function dpReasonFor(t){
+  if(t.kind==="rescue") return t.status==="complete" ? "Re-sealed — nicely done" : `Seal is ${sealCondition(t.p).label.toLowerCase()} — re-seal it`;
+  if(t.kind==="climb") return t.status==="complete" ? "You stepped forward today" : (t.p.sealed ? "Ready for a polish" : ((t.p.stage||0)>0 ? "Continue climbing" : "Begin this verse"));
+  if(t.kind==="strengthen") return t.status==="complete" ? "That trouble spot is cooling down" : "A recent trouble spot — reinforce it";
+  return "";
+}
+function dpTaskRowHTML(t){
+  const done = t.status==="complete";
+  if(t.kind==="victory"){
+    const def = t.def;
+    return `<div class="dp-row ${done?'done':''}" data-task="${escHTML(t.id)}">
+      <div class="dp-icon">${done?"✓":def.emoji}</div>
+      <div class="dp-info">
+        <div class="dp-title">${escHTML(def.name)}</div>
+        <div class="dp-reason">${done?"Quest already won today":def.desc}</div>
+      </div>
+      <div class="dp-go">${done?"Won":"Play ▸"}</div>
+    </div>`;
+  }
+  const safeV = safePassageHTML(t.v);
+  return `<div class="dp-row ${done?'done':''}" data-task="${escHTML(t.id)}">
+    ${relicHTML(t.v, 40)}
+    <div class="dp-info">
+      <div class="dp-title">${safeV.ref}</div>
+      <div class="dp-reason">${dpReasonFor(t)}</div>
+    </div>
+    <div class="dp-go">${done?"✓":"Go ▸"}</div>
+  </div>`;
+}
+function dailyPathCardHTML(){
+  const plan = dailyPlanFor();
+  const required = plan.filter(t=>t.required);
+  const optional = plan.filter(t=>!t.required);
+  const doneRequired = required.filter(t=>t.status==="complete").length;
+  const allDone = required.length>0 && doneRequired===required.length;
+  const shownRescueIds = new Set(plan.filter(t=>t.kind==="rescue").map(t=>t.passageId));
+  const dueBeyond = dueReviews().filter(v=>!shownRescueIds.has(v.id))
+    .slice(0, Math.max(0, ensureSettings().dailyReviewLimit - shownRescueIds.size));
+  return `
+    <div class="home-card daily-path-card">
+      <h3><span class="spark">🗺️</span> Your Daily Path ${required.length?`<span class="tt-count">${doneRequired}/${required.length}</span>`:""}</h3>
+      <div class="tt-sub">${allDone ? "Today's required path is complete — anything below is a bonus. ✦" : "A short, focused route. Finish these and today counts."}</div>
+      <div class="dp-list">${required.map(dpTaskRowHTML).join("")}</div>
+      ${dueBeyond.length ? `<div class="dp-more" id="dpSeeAllDue">${view.dpShowAllDue?"Hide the rest ▴":`+${dueBeyond.length} more seal${dueBeyond.length===1?"":"s"} due — see all ▸`}</div>` : ""}
+      ${view.dpShowAllDue && dueBeyond.length ? `<div class="dp-list dp-extra">${dueBeyond.map(v=>dpTaskRowHTML({id:`extra:${v.id}`, kind:"rescue", v, p:state.progress[v.id], status:"ready"})).join("")}</div>` : ""}
+      ${optional.length ? `
+        <div class="dp-optional-label">Optional today</div>
+        <div class="dp-list dp-optional">${optional.map(dpTaskRowHTML).join("")}</div>
+      ` : ""}
+    </div>`;
+}
+function bindDailyPathCard(body){
+  const plan = dailyPlanFor();
+  body.querySelectorAll(".daily-path-card .dp-row[data-task]").forEach(el=>{
+    el.onclick = ()=>{
+      const id = el.dataset.task;
+      if(id.startsWith("extra:")){
+        const v = passageById(id.slice(6));
+        if(v) openRecallCheck(v, "reseal");
+        return;
+      }
+      const t = plan.find(x=>x.id===id);
+      if(!t || t.status==="complete") return;
+      if(t.kind==="rescue") openRecallCheck(t.v, "reseal");
+      else if(t.kind==="climb") openStudy(t.v.id, false);
+      else if(t.kind==="strengthen"){ view.studyMode="trouble"; openStudy(t.v.id, false); }
+      else if(t.kind==="victory") startQuestRound(t.questId);
+    };
+  });
+  const seeAll = document.getElementById("dpSeeAllDue");
+  if(seeAll) seeAll.onclick = ()=>{ view.dpShowAllDue = !view.dpShowAllDue; renderToday(); };
+}
+
 function renderToday(){
   const body = document.getElementById("body");
   const christian = activeTrack().id === "christian";
@@ -173,6 +251,8 @@ function renderToday(){
   }
 
   html += checkinCardHTML();
+
+  if(started) html += dailyPathCardHTML();
 
   const keyPhraseCount = phrasePassages(activePassages()).length;
   if(keyPhraseCount){
@@ -258,25 +338,6 @@ function renderToday(){
   }
 
   html += `
-    ${sealedTotal()>=3 ? `<div class="home-card">
-      <h3><span class="spark">🕯️</span> Fading Seals ${due.length?`· ${due.length} due`:''}</h3>
-      ${due.length ? due.slice(0,6).map(v=>{
-        const p = state.progress[v.id];
-        const r = relicFor(v);
-        const safeV = safePassageHTML(v);
-        return `
-          <div class="review-item" data-id="${safeV.id}">
-            ${relicHTML(v, 46)}
-            <div class="ri-info">
-              <div class="ri-ref">${safeV.ref}</div>
-              <div class="ri-name">${escHTML(r.name)}</div>
-            </div>
-            ${condBadgeHTML(p)}
-            <div class="ri-go">Re-seal ▸</div>
-          </div>`;
-      }).join("") : `<div class="all-lit">✦ Every seal is burning bright. Nothing to review today.</div>`}
-    </div>` : ''}
-
     ${trialPool().length ? (()=>{
       const a = ensureArena();
       const quests = ensureArenaQuests(a);
@@ -365,6 +426,7 @@ function renderToday(){
 
   body.innerHTML = html;
   bindCheckinCard(body);
+  if(started) bindDailyPathCard(body);
   body.querySelectorAll(".quest-click").forEach(el=>{
     el.onclick = ()=>{ SFX.pick(); startQuestRound(el.dataset.quest); };
   });
@@ -423,4 +485,8 @@ SQ.fmtKB = fmtKB;
 SQ.storageLineHTML = storageLineHTML;
 SQ.checkinCardHTML = checkinCardHTML;
 SQ.bindCheckinCard = bindCheckinCard;
+SQ.dpReasonFor = dpReasonFor;
+SQ.dpTaskRowHTML = dpTaskRowHTML;
+SQ.dailyPathCardHTML = dailyPathCardHTML;
+SQ.bindDailyPathCard = bindDailyPathCard;
 SQ.renderToday = renderToday;

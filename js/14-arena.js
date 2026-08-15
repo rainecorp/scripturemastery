@@ -480,7 +480,15 @@ function settleAnswer(T, q, correct, opts){
   const p=state.progress[q.v.id];
   const wasDue=isDue(p);
   const clean=correct&&!q.hinted&&!opts.penalty;
-  const grade=!correct?"again":(clean&&q.type==="fullRecitation"?"easy":(clean?"good":"hard"));
+  /* T16: Full Recitation now asks the learner's own confidence directly
+     (Again/Hard/Good/Easy) instead of assuming a clean, unpeeked pass is
+     always "easy" — opts.confidence carries that self-report straight
+     through. The view layer already caps it at "hard" when q.hinted, so
+     nothing here needs to re-check that. Every other question type keeps
+     the original derived grade — objective types have a real right answer,
+     confidence input is only for the ones that don't. */
+  const grade = opts.confidence ? opts.confidence
+    : (!correct?"again":(clean&&q.type==="fullRecitation"?"easy":(clean?"good":"hard")));
   const positions=arenaLearningPositions(q,correct);
   const eligible=!(q.type==="fullRecitation"&&q.hinted);
   recordLearningAttempt(state,q.v.id,{

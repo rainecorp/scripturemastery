@@ -813,29 +813,40 @@ function renderArenaSession(){
       });
     }
   } else if(q.type==="fullRecitation"){
+    /* T16: confidence input. This is self-reported, so there's no objective
+       score to grade — the learner rates their own recitation directly,
+       Again/Hard/Good/Easy, one tap. Peeking still caps it at Hard (the
+       evidence table in ROADMAP.md §2.3: "hard max, no peek"), enforced
+       here by disabling Good/Easy rather than by silently downgrading
+       whatever they pick. */
+    const capped = q.peekOpen;
     shell(`
       <div class="tq-card"><div class="tq-kicker">Full recitation</div><div class="tq-ref">${escHTML(q.v.ref)}</div><div class="tq-theme">${escHTML(q.v.topic)}</div>
-        <p style="margin-top:10px;color:#b9aef2;font-size:12.5px;font-weight:700;">Recite the entire scripture aloud from memory, then be honest with yourself.</p>
+        <p style="margin-top:10px;color:#b9aef2;font-size:12.5px;font-weight:700;">Recite the entire scripture aloud from memory, then rate how it went.</p>
       </div>
       ${q.peekOpen ? `<div class="recite-peek">"${numberedVerseText(q.v)}"</div>` : ``}
+      <div class="recite-confidence" role="group" aria-label="How did that recitation go?">
+        <button class="rc-conf rc-again" data-grade="again">Again</button>
+        <button class="rc-conf rc-hard" data-grade="hard">Hard</button>
+        <button class="rc-conf rc-good" data-grade="good" ${capped?"disabled":""}>Good</button>
+        <button class="rc-conf rc-easy" data-grade="easy" ${capped?"disabled":""}>Easy</button>
+      </div>
+      ${capped ? `<div class="recite-cap-note">Peeked, so this counts as Hard at best — still solid recall evidence, just not a clean one.</div>` : ``}
       <div class="recite-btns">
-        <button class="btn primary" id="reciteGood">✓ I recited it fully</button>
         <button class="btn" id="reciteHint">${q.peekOpen ? "🙈 Hide the words" : "👀 Peek at the words"}</button>
-        <button class="btn" id="reciteMiss">✗ I need more practice</button>
       </div>
     `);
-    document.getElementById("reciteGood").onclick = ()=>{
-      if(T.locked) return; T.locked = true;
-      settleAnswer(T, q, true);
-      flash(document.getElementById("reciteGood"), q.gained);
-      advance();
-    };
-    document.getElementById("reciteMiss").onclick = ()=>{
-      if(T.locked) return; T.locked = true;
-      settleAnswer(T, q, false);
-      shake();
-      advance();
-    };
+    body.querySelectorAll(".rc-conf").forEach(btn=>{
+      btn.onclick = ()=>{
+        if(T.locked || btn.disabled) return;
+        T.locked = true;
+        const grade = btn.dataset.grade;
+        const correct = grade!=="again";
+        settleAnswer(T, q, correct, {confidence:grade});
+        if(correct) flash(btn, q.gained); else shake();
+        advance();
+      };
+    });
     document.getElementById("reciteHint").onclick = ()=>{
       if(!q.peekOpen && !spendArenaHeart(T, q, "Scripture words revealed")) return;
       q.peekOpen = !q.peekOpen;
