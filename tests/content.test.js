@@ -3,7 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 const {
-  isOpaquePassageId, contentCatalogIssues, compileContentPacks, passageInTranslation, campaignAreasFromIds
+  isOpaquePassageId, contentCatalogIssues, compileContentPacks, passageInTranslation, campaignAreasFromIds,
+  registerTranslation, registeredTranslations, translationById, translationLabel, translationIssues
 } = require("../js/00-content.js");
 const {towerGeometry, tvLevelTop, tvLevelHeight} = require("../js/00-tower-geometry.js");
 const {textHash} = require("../js/00-verify.js");
@@ -22,7 +23,11 @@ function eq(name, actual, expected){
 const root = path.join(__dirname, "..");
 const packFiles = ["passages.js","articles-of-faith.js","doctrinal-mastery.js","christian.js"];
 const packs = [];
-global.SQ = {registerContentPack(value){ packs.push(value); }};
+/* registerTranslation is the real one from 00-content.js, so evaluating
+   data/translations.js below populates the module's own registry through
+   exactly the path the browser uses. */
+global.SQ = {registerContentPack(value){ packs.push(value); }, registerTranslation};
+eval(fs.readFileSync(path.join(root,"data","translations.js"),"utf8"));
 packFiles.forEach(file=>eval(fs.readFileSync(path.join(root,"data",file),"utf8")));
 
 let textSources;
@@ -115,6 +120,59 @@ const genesis = catalog.passages.find(p=>p.ref==="Genesis 1:1");
 ok("translation materialization swaps exact wording", passageInTranslation(genesis,"bsb").text !== passageInTranslation(genesis,"kjv").text);
 eq("translation materialization stamps BSB", passageInTranslation(genesis,"bsb").translation, "bsb");
 eq("translation materialization stamps KJV", passageInTranslation(genesis,"kjv").translation, "kjv");
+
+/* ---- Slice 2: the translation registry ---- */
+eq("the three shipped translations register from data alone",
+  registeredTranslations().map(t=>t.id).sort(), ["bsb","kjv","lds2013"]);
+eq("the shipped registry is internally sound", translationIssues(), []);
+eq("labels come from the registry, not a hardcoded map", ["lds2013","kjv","bsb"].map(translationLabel), ["LDS","KJV","BSB"]);
+eq("an unregistered translation still renders a readable label", translationLabel("nrsv"), "NRSV");
+eq("an unregistered translation has no registry entry", translationById("nrsv"), null);
+ok("no shipped translation claims public domain without stating why",
+  registeredTranslations().every(t=>!t.isPublicDomain || t.rightsBasis.length > 0));
+ok("no shipped translation is gated yet — the paywall has not shipped",
+  registeredTranslations().every(t=>t.requiresEntitlement === false));
+
+/* The registry refuses entries that would lose the reasoning behind a claim. */
+eq("a licensed translation naming no licensor is rejected",
+  translationIssues([{id:"esv",label:"ESV",isPublicDomain:false,licensor:null,rightsBasis:"licensed"}]),
+  ["esv is not public domain and names no licensor."]);
+eq("a public-domain claim with no basis is rejected",
+  translationIssues([{id:"web",label:"WEB",isPublicDomain:true,rightsBasis:""}]),
+  ["web claims public domain without stating the basis."]);
+eq("a duplicate translation id is rejected",
+  translationIssues([{id:"kjv",label:"A",isPublicDomain:true,rightsBasis:"x"},
+                     {id:"kjv",label:"B",isPublicDomain:true,rightsBasis:"x"}]),
+  ["kjv is registered more than once."]);
+eq("a malformed translation id is rejected",
+  translationIssues([{id:"KJV 1611",label:"A",isPublicDomain:true,rightsBasis:"x"}]).length, 1);
+
+/* THE SLICE 2 DONE-WHEN, asserted rather than asserted-about: adding a
+   translation is a data change and nothing else. Two are registered here at
+   runtime — after every engine, renderer and content pack in this repo was
+   already written — and the resolution boundary honours both purely from
+   their registry flags. If someone reintroduces a hardcoded translation id,
+   this is the test that should go red. */
+registerTranslation({id:"web",label:"World English Bible",short:"WEB",isPublicDomain:true,
+  rightsBasis:"Public domain by dedication.",usesChristianTopics:true,hasAuthoredKeyPhrases:false});
+registerTranslation({id:"asv",label:"American Standard Version",short:"ASV",isPublicDomain:true,
+  rightsBasis:"Published 1901; copyright expired.",usesChristianTopics:false,hasAuthoredKeyPhrases:true});
+
+const synthetic = Object.freeze({
+  id:"p_00000000", source:"pack", ref:"Test 1:1",
+  topic:"restoration topic", topics:{christian:"christian topic"},
+  keyPhrase:"an authored phrase", translation:"lds2013",
+  texts:{lds2013:"lds wording", web:"web wording", asv:"asv wording"},
+  textVerification:{}
+});
+const asWeb = passageInTranslation(synthetic,"web");
+eq("a translation added after the fact materializes its own text", asWeb.text, "web wording");
+eq("...and stamps itself", asWeb.translation, "web");
+eq("...and takes the Christian topic because its registry entry says so", asWeb.topic, "christian topic");
+eq("...and drops the key phrase, which was not authored against it", asWeb.keyPhrase, null);
+const asAsv = passageInTranslation(synthetic,"asv");
+eq("the opposite flags produce the opposite handling — topic", asAsv.topic, "restoration topic");
+eq("the opposite flags produce the opposite handling — key phrase", asAsv.keyPhrase, "an authored phrase");
 
 eq("a 7-passage campaign chunks into five ceil-sized areas",
   campaignAreasFromIds([1,2,3,4,5,6,7]).map(a=>a.length), [2,2,2,1,0]);

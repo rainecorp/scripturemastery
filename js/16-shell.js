@@ -94,10 +94,12 @@ function switchTranslation(translation){
 }
 function pathControlsHTML(){
   const translations = translationOptionsForTrack();
-  const names = {bsb:"BSB",kjv:"KJV"};
+  /* Labels used to be a hardcoded {bsb:"BSB",kjv:"KJV"} map right here, which
+     is the reason a new translation needed a UI edit. They come from the
+     registry now (data/translations.js) — see Slice 2. */
   return `<div class="path-controls" aria-label="Scripture path and translation">
     <label><span>Path</span><select id="trackPicker">${allTracks().map(t=>`<option value="${escHTML(t.id)}" ${t.id===activeTrack().id?"selected":""}>${escHTML(t.id==="seminary"?"Seminary":t.name)}</option>`).join("")}</select></label>
-    ${translations.length>1?`<label><span>Translation</span><select id="translationPicker">${translations.map(id=>`<option value="${id}" ${id===state.translation?"selected":""}>${names[id]||id.toUpperCase()}</option>`).join("")}</select></label>`:""}
+    ${translations.length>1?`<label><span>Translation</span><select id="translationPicker">${translations.map(id=>`<option value="${escHTML(id)}" ${id===state.translation?"selected":""}>${escHTML(translationLabel(id))}</option>`).join("")}</select></label>`:""}
   </div>`;
 }
 function render(){

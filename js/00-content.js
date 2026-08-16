@@ -204,17 +204,111 @@ function compileContentPacks(packs, verificationRecords){
   });
 }
 
+/* ===========================================================================
+   TRANSLATION REGISTRY (Slice 2 of CLAUDE-CODE-HANDOFF.md)
+   ===========================================================================
+   Translations used to be bare strings — "bsb", "kjv", "lds2013" — with the
+   knowledge about them scattered across the code that consumed them: a label
+   map hardcoded in a UI file, and two `["bsb","kjv"].includes(key)` tests
+   inside passageInTranslation() below. That meant adding a translation was a
+   code change in several files, and forgetting one of them failed silently
+   and wrongly rather than loudly.
+
+   This registry is the one place a translation is described. Adding one is a
+   data change in data/translations.js and nothing else. There is a test that
+   proves that claim by adding a fourth translation at runtime and asserting
+   the code picks it up untouched — if a future change reintroduces a
+   hardcoded translation id anywhere, that test is what should catch it.
+
+   Why the rights fields are shaped this way: the handoff asks for
+   is_public_domain, requires_entitlement and licensor. A bare boolean for
+   "public domain" would record the conclusion and throw away the reasoning,
+   and this codebase already rejects that pattern once — data/text-sources.js
+   stores *why* a passage's text is trusted, not merely that it is, on the
+   stated grounds that an entry added on faith is worse than no entry. Same
+   principle here: `rightsBasis` says why we believe we can ship the text, and
+   `counselReviewed` records whether a lawyer has actually agreed, which is
+   still open (ROADMAP.md §10 decision 4) and must not be quietly laundered
+   into a `true` that later code trusts.
+   =========================================================================== */
+const TRANSLATIONS = [];
+const TRANSLATION_ID = /^[a-z][a-z0-9]{1,15}$/;
+
+function registerTranslation(raw){
+  if(!raw || typeof raw !== "object") throw new TypeError("A translation must be an object.");
+  if(!raw.id) throw new TypeError("A translation must have an id.");
+  const t = Object.freeze({
+    id: String(raw.id),
+    label: String(raw.label || raw.id),
+    short: String(raw.short || String(raw.id).toUpperCase()),
+    /* Rights. */
+    isPublicDomain: raw.isPublicDomain === true,
+    rightsBasis: String(raw.rightsBasis || ""),
+    counselReviewed: raw.counselReviewed === true,
+    licensor: raw.licensor || null,
+    attribution: raw.attribution || null,
+    /* Entitlement. Declared now, enforced when the paywall ships — see
+       ROADMAP.md §5.2, which puts "all translations" behind Quest+. Setting
+       this true today would gate something that is free today. */
+    requiresEntitlement: raw.requiresEntitlement === true,
+    /* Content behaviour, replacing the old hardcoded id checks. */
+    usesChristianTopics: raw.usesChristianTopics === true,
+    hasAuthoredKeyPhrases: raw.hasAuthoredKeyPhrases === true
+  });
+  TRANSLATIONS.push(t);
+  return t;
+}
+
+function registeredTranslations(){ return TRANSLATIONS.slice(); }
+
+function translationById(id, list){
+  const all = Array.isArray(list) ? list : TRANSLATIONS;
+  return all.find(t=>t.id === id) || null;
+}
+
+/* The short display name. Falls back to the uppercased id so an unregistered
+   translation renders as something readable rather than blank. */
+function translationLabel(id, list){
+  const t = translationById(id, list);
+  return t ? t.short : String(id || "").toUpperCase();
+}
+
+/* Same shape and spirit as contentCatalogIssues(): returns a list of human
+   sentences, empty when the registry is sound. */
+function translationIssues(list){
+  const all = Array.isArray(list) ? list : TRANSLATIONS;
+  const issues = [];
+  const seen = new Set();
+  all.forEach((t, i)=>{
+    const label = t && t.id ? t.id : `translation ${i + 1}`;
+    if(!t || !t.id){ issues.push(`${label} has no id.`); return; }
+    if(!TRANSLATION_ID.test(t.id)) issues.push(`${label} is not a valid translation id (lowercase letters and digits, 2-16 characters).`);
+    if(seen.has(t.id)) issues.push(`${label} is registered more than once.`);
+    seen.add(t.id);
+    if(!t.label) issues.push(`${label} has no label.`);
+    if(!t.isPublicDomain && !t.licensor) issues.push(`${label} is not public domain and names no licensor.`);
+    if(t.isPublicDomain && !t.rightsBasis) issues.push(`${label} claims public domain without stating the basis.`);
+  });
+  return issues;
+}
+
 function passageInTranslation(passage, translation){
   if(!passage || passage.source === "user" || !passage.texts) return passage;
   const key = passage.texts[translation] ? translation : passage.translation;
   if(!key || passage.translation === key) return passage;
   const rec = (passage.textVerification || {})[key] || null;
+  /* An unregistered translation keeps the passage's own topic and key phrase,
+     which is exactly what the old ["bsb","kjv"] tests did for any id outside
+     that pair. Registration changes behaviour; absence of it never does. */
+  const meta = translationById(key);
+  const christianTopics = !!(meta && meta.usesChristianTopics);
+  const keepKeyPhrase = !meta || meta.hasAuthoredKeyPhrases;
   return Object.freeze({
     ...passage,
     text: passage.texts[key],
-    topic: ["bsb","kjv"].includes(key) && passage.topics && passage.topics.christian
+    topic: christianTopics && passage.topics && passage.topics.christian
       ? passage.topics.christian : passage.topic,
-    keyPhrase: ["bsb","kjv"].includes(key) ? null : passage.keyPhrase,
+    keyPhrase: keepKeyPhrase ? passage.keyPhrase : null,
     translation: key,
     textVerifiedAt: rec ? rec.verifiedAt : null,
     textHash: rec ? rec.hash : null
@@ -233,7 +327,9 @@ if(typeof module !== "undefined" && module.exports){
   module.exports = {
     isOpaquePassageId, registerContentPack, registeredContentPacks,
     bookFromReference, canonFromReference, contentCatalogIssues,
-    compileContentPacks, passageInTranslation, campaignAreasFromIds
+    compileContentPacks, passageInTranslation, campaignAreasFromIds,
+    registerTranslation, registeredTranslations, translationById,
+    translationLabel, translationIssues
   };
 }
 
@@ -247,4 +343,9 @@ if(typeof SQ !== "undefined"){
   SQ.compileContentPacks = compileContentPacks;
   SQ.passageInTranslation = passageInTranslation;
   SQ.campaignAreasFromIds = campaignAreasFromIds;
+  SQ.registerTranslation = registerTranslation;
+  SQ.registeredTranslations = registeredTranslations;
+  SQ.translationById = translationById;
+  SQ.translationLabel = translationLabel;
+  SQ.translationIssues = translationIssues;
 }

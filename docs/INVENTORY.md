@@ -205,6 +205,8 @@ There's also `tests/fingerprint.js`, a deterministic DOM + computed-style hash u
 
 Every table in handoff §5, plus the `users` table all of them foreign-key into.
 
+> **Status note, 2026-08-16:** Slice 2 has since **shipped** — see §12. The translation row below is kept as the audit found it.
+
 | This spec requires | Exists today? | Gap |
 |---|---|---|
 | `users` | ❌ **No** | No server. `scriptureProfiles_v1` in `localStorage` is device-local, unauthenticated, with locally-generated random IDs. Cannot be promoted; must be built from zero. **This is the §4 stop condition.** |
@@ -304,7 +306,7 @@ Slice 0 is complete; the stop condition is real. **Do not proceed to Slice 1 as 
 2. ✅ **Child-privacy scope** — COPPA in, FERPA out (§10.3); posture drafted in `ROADMAP.md` §5.6, awaiting a one-line sign-off. Sign-in providers settled there too: **email + Google + Sign in with Apple** (Apple being mandatory once Google ships on iOS, per App Store guideline 4.8).
 3. ⏳ **Backend stack and host — still open, and now the only thing blocking Slice 1.** The handoff shows Postgres and says "adapt to the actual stack"; there is no actual stack, so this is a genuinely free choice and should be made deliberately.
 
-**On A3, the recommendation is a Postgres-backed BaaS (Supabase or equivalent) over a hand-rolled API**, for reasons specific to this project rather than general preference:
+**A3 was resolved on 2026-08-16 in favour of a Postgres-backed BaaS (Supabase or equivalent).** The reasoning, recorded so a future reader can tell whether it still holds:
 
 - It supplies **Google and Apple sign-in as configuration**, and §5.6 now requires both. Building OIDC twice by hand is the single largest avoidable cost in Slice 1.
 - **Row-level security is exactly the tool §5.6 needs** — "an attribution row may never reference a child profile" and "a parent may read only their own children" become database policies, which is where that rule has to live to actually hold.
@@ -323,8 +325,8 @@ The handoff's best advice is in §7: *"Slices 1–5 contain no affiliate logic. 
 
 | Order | Work | Note |
 |---|---|---|
-| 1 | **Slice 2** (finish translations) | Today. No decisions, no backend. |
-| 2 | *Decision A3 — stack and host* | ⏳ The only thing still blocking Slice 1. |
+| 1 | ~~**Slice 2** (finish translations)~~ | ✅ **Shipped 2026-08-16 — see §12.** |
+| 2 | ✅ *Decision A3 — stack and host* | **Resolved: Supabase-class Postgres BaaS.** |
 | 3 | **Slice 1** (accounts) — *a new codebase* | Plan as a 0→1 backend, not a modification. Three things belong in it that aren't in the handoff's Slice 1: the **parent/child account model** (§5.6), the **local-profile → real-account claim migration** (`adoptGuestSave()` is the precedent and the UX is already built), and **retiring the Daily Quest bridge** (§3). |
 | 4 | **Slice 3** (entitlement service) | Client half exists; server must become the authority, local value demoted to cache with offline fallback. |
 | 5 | **Slice 4** (Stripe web) | **Revenue starts here.** Stop and reassess before going further. |
@@ -334,4 +336,27 @@ The handoff's best advice is in §7: *"Slices 1–5 contain no affiliate logic. 
 
 **One architectural note to carry into Slice 1**, because it's cheap now and expensive later: this app is offline-first by design and ships as a PWA. Every server call added must degrade gracefully to the local copy, and `state.entitlement` must become *"last known good, server is truth"* rather than either extreme. The existing quota handling in `js/03-state.js` is a good sign someone already thinks this way.
 
-**And one boundary worth stating:** nothing above touches the roadmap's own track (T19 speech, T17 leagues). The affiliate/billing work is a parallel program with its own dependencies, and T17 is separately blocked on the same COPPA/FERPA decision — so resolving §10.3 unblocks both at once. That makes it the single highest-leverage decision on the table.
+**And one boundary worth stating:** nothing above touches the roadmap's own track (T19 speech, T17 leagues). The affiliate/billing work is a parallel program with its own dependencies, and T17 is separately blocked on the same COPPA/FERPA decision — so resolving §10.3 unblocks both at once. That made it the highest-leverage decision on the table, and it is now made.
+
+---
+
+## 12 · Slice 2 — ✅ **SHIPPED 2026-08-16**
+
+**Done-when, from the handoff:** *"Adding a translation is a config/data change requiring **zero** code changes. Prove it by adding one."*
+
+**What shipped:**
+
+- **`data/translations.js`** (new) — the registry, and the only file that names a translation. Three entries: `lds2013`, `kjv`, `bsb`. Each carries `label`/`short`, the handoff's three required rights fields (`isPublicDomain`, `requiresEntitlement`, `licensor`), plus `attribution` and two fields that replace hardcoded behaviour (`usesChristianTopics`, `hasAuthoredKeyPhrases`). A commented ESV entry records the licensed shape before it's needed.
+- **`js/00-content.js`** — `registerTranslation`, `registeredTranslations`, `translationById`, `translationLabel`, `translationIssues`, dual-exported like the rest of tier 00.
+- **Two hardcodings deleted**, which were the actual reason the abstraction wasn't real:
+  - the `{bsb:"BSB",kjv:"KJV"}` label map in `js/16-shell.js` (a UI file deciding what a translation is called);
+  - the twin `["bsb","kjv"].includes(key)` tests inside `passageInTranslation()`, which silently drove both topic selection and key-phrase suppression. A fourth translation would have been mishandled by both with no error.
+- **`data/doctrinal-mastery.js`** — the Seminary track now declares `translations:["lds2013"]`. It previously declared a default but no list, so `translationOptionsForTrack()` returned `[]` for the app's primary track. No UI change: the picker only renders above one option.
+
+**Two deliberate non-changes.** `requiresEntitlement` is `false` everywhere, because setting it true today would gate something currently free — `ROADMAP.md` §5.2 puts "all translations" behind Quest+, and that switch belongs to the paywall slice, not this one. And `counselReviewed` is `false` on all three, because it is: ROADMAP §10 decision 4 is still open, and the field exists precisely so "we believe" can't quietly become "we checked."
+
+**Why `rightsBasis` exists at all,** since the handoff only asked for a boolean: `data/text-sources.js` already established the house rule that provenance beats assertion — *"an entry added on faith is worse than no entry."* A bare `isPublicDomain: true` records a conclusion and discards the reasoning behind it, which is the wrong trade for the one field in this codebase most likely to be read by a lawyer.
+
+**Verification.** Full suite green at **418 assertions** (content 94 → 111); every `js/`, `data/` and `tests/` file passes `node --check`; `git diff --check` clean. The Done-when is asserted rather than described: the test registers **two** new translations at runtime — long after every engine and renderer in the repo was written — and asserts the resolution boundary honours both purely from their flags, in opposite directions. In the browser: registry loads with zero issues, the picker renders BSB/KJV from the registry exactly as the old map did, switching translations still swaps wording, Seminary correctly shows no picker, and all six nav tabs render on genuine clicks with a clean console.
+
+**Not done, and out of scope by design:** *enforcing* `requiresEntitlement`, and seeding WEB/NET/ASV. Seeding is now purely a content task — a `texts` key per passage plus a registry entry — with no code change required, which is the whole point.
