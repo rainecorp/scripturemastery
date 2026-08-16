@@ -22,7 +22,9 @@ Three findings soften that, and one sharpens it:
 - ✅ **`state.entitlement` already exists** in the exact shape the handoff's §6.1 returns. See §4.
 - ✅ **Translation is already a first-class concept.** Slice 2 — flagged in the handoff as *"the most expensive mistake available in this project"* — is substantially already built. See §5.
 - ✅ **A real, tested migration runner exists.** See §7.
-- ⚠️ **The handoff contains factual errors about this app** and a **direct pricing contradiction** with `ROADMAP.md` that changes the affiliate program's economics by an order of magnitude. See §10. These need your decision, not mine.
+- ⚠️ **The handoff contains factual errors about this app** and a **direct pricing contradiction** with `ROADMAP.md` that changes the affiliate program's economics by an order of magnitude. See §10.
+
+> **Update, 2026-08-16 — two of the three §10 conflicts are now closed by owner decision.** Pricing resolved in the handoff's favour (§10.2); COPPA in / FERPA out, with a posture drafted in `ROADMAP.md` §5.6 (§10.3). The owner also **released the Daily Quest tie-in as a constraint** — see §3. **The one remaining blocker before Slice 1 is the backend stack and host choice** (§11).
 
 ---
 
@@ -77,6 +79,9 @@ What exists is a profile *namespacing* scheme:
 - Accepts `?climber=<name>` and `?from=` on the URL.
 
 This is a one-way, same-origin, best-effort event queue. It is **not** sync — nothing is reconciled, nothing round-trips, and it silently no-ops when `CLIMBER` is null.
+
+> ✅ **Released as a constraint, 2026-08-16 (owner):** Scripture Quest is now to be a full standalone product rather than a Daily Quest companion, and the owner retains their own copy of Daily Quest independently. **The handoff's "don't break the Daily Quest bridge" guardrail no longer binds.**
+> **Recommended handling: don't delete it now — retire it during Slice 1.** It is inert when `CLIMBER` is null and harmless today, and the code that implements it (`CLIMBER`, `STORE_KEY` namespacing, `emitBridge`, `?climber=`) is *exactly* the code that server-side identity replaces. Removing it as part of that change is one coherent edit; removing it now is a separate destructive change that buys nothing. `js/00-config.js:139`, `js/03-state.js:14-58`.
 
 **Manual export/import (real).** `exportProgress()` (`js/03-state.js:204`) emits `{exportFormat:1, exportedAt, climber, state}`; `previewProgressImport()` validates a pasted blob, accepts either the wrapped or bare shape, and runs it through the same migration runner as a boot-time load. This is the only way progress moves between devices today: a human copies a JSON file.
 
@@ -157,7 +162,7 @@ Slice 2 asks: *"Is translation a first-class concept, or is text hardcoded/singl
 - `ROADMAP.md` §10 records the *intent* as resolved — "web PWA + Capacitor iOS + TWA Android" — but no work has started.
 - `file://` compatibility is deliberately maintained (the whole no-ES-modules constraint follows from it).
 
-**Implication for Slice 5 (native receipts):** there is no native client to receive a receipt from. Slice 5 has a prerequisite that isn't in the handoff's dependency table — *build the native wrappers first*. Practically: Capacitor + StoreKit 2 for iOS; a TWA can't do Play Billing, so Android likely needs Capacitor too, or a Play Billing bridge. That's a real body of work, plus two developer-account enrollments and two review cycles.
+**Implication for Slice 5 (native receipts):** there is no native client to receive a receipt from. Slice 5 has a prerequisite that isn't in the handoff's dependency table — *build the native wrappers first*. Practically: Capacitor + StoreKit 2 for iOS. On Android a TWA *can* reach Play Billing through the Digital Goods API, so the roadmap's TWA plan isn't disqualified — but it's the narrower, fussier path, and using Capacitor on both platforms means one purchase integration instead of two. That's a real body of work either way, plus two developer-account enrollments and two review cycles.
 
 **Implication for Slice 13 (IAP steer):** it presumes native paywalls, storefront detection, and App Review exposure. All downstream of the above.
 
@@ -236,7 +241,17 @@ Ground rule 6 and the §10 guardrail both protect *"relics, spaced repetition, f
 
 Not a problem in itself — but it means the handoff was written against an assumed app rather than this one, which is exactly why §0 told me to audit first. **Treat its other assumptions about existing behavior as unverified too.**
 
-### 10.2 ⚠️ Pricing — a direct, order-of-magnitude contradiction (needs your decision)
+### 10.2 ✅ **RESOLVED 2026-08-16 — pricing confirmed in the handoff's favour**
+
+**The owner confirmed the handoff's ladder: $8.99/mo web, $44.99/yr web, $139.99 lifetime web; native +$1/+$5 with no lifetime.** The strategy is **annual-first** — $44.99/yr is an effective $3.75/mo, 58% below the monthly rate, and monthly at $8.99 is deliberately the price of *not committing*. `ROADMAP.md` §5.4 has been rewritten to match and now points at handoff §3.1 as the source of truth; the old $0.99/$9.99 ladder is marked superseded so nobody builds it by accident.
+
+**Every §3.4 and §3.5 commission figure is therefore valid as written**, and the affiliate program clears its own $25 payout minimum on a single lifetime referral ($44.80). The one money constant still genuinely open is the **40% lifetime commission rate**, which is handoff §8 open item 1 and lives as a single named constant by design.
+
+The original analysis is preserved below for the record.
+
+---
+
+### ~~10.2 ⚠️ Pricing — a direct, order-of-magnitude contradiction (needs your decision)~~ *(resolved above)*
 
 Handoff §3 says its table is the single source of truth and *"if any other document disagrees, this table wins."* `ROADMAP.md` §5.4 disagrees enormously:
 
@@ -255,7 +270,19 @@ I am not treating this as a document-precedence question, because it isn't one. 
 
 **Needed from you:** one ladder, confirmed, that both documents then point at. This decides whether the affiliate program is viable at all, so it comes before Slice 4, not during. Everything else in the handoff is well-specified enough to build once this is settled.
 
-### 10.3 ⚠️ COPPA / FERPA is unresolved and now blocks more than it did
+### 10.3 ✅ **SCOPE SET 2026-08-16 — COPPA in, FERPA out**
+
+**The owner scoped this to COPPA only.** FERPA is out, which means school-district procurement is not a v1 channel — a free trade, since Classroom Mode (T18) never creates a student account and is FERPA-free by construction.
+
+A concrete COPPA posture is now drafted in **`ROADMAP.md` §5.6**: a neutral age screen; **under-13s never hold their own account** (a parent does, and child profiles hang off it); child profiles carry no PII beyond an allowlisted hero display name; and — the rule that must live in the schema rather than a policy doc — **no attribution row, click cookie, or IP hash ever attaches to a child profile.** It needs a one-line owner sign-off, plus counsel review before a paid launch (ROADMAP §10 decision 4, already tracked).
+
+Also settled there: **ship email + Google + Sign in with Apple.** Apple is not optional once Google ships on iOS — App Store guideline 4.8 requires it alongside any third-party sign-in.
+
+The original analysis is preserved below for the record.
+
+---
+
+### ~~10.3 ⚠️ COPPA / FERPA is unresolved and now blocks more than it did~~ *(scoped above)*
 
 `ROADMAP.md` §10 decision #3 — COPPA posture for under-13 accounts, FERPA if adopted through schools — is open and marked *"Needs a documented answer before any backend."* T20 is annotated: *"For this product minors are the primary user, not an edge case."*
 
@@ -272,11 +299,20 @@ Handoff §8 says *do not invent answers.* This qualifies. It's a documented-poli
 
 Slice 0 is complete; the stop condition is real. **Do not proceed to Slice 1 as written.** What I'd do instead:
 
-**A. Two decisions from you, first (§8-class — I shouldn't invent these).**
-1. **The pricing ladder** (§10.2). The affiliate program's viability rides on it.
-2. **COPPA / FERPA posture** (§10.3), documented before any schema is designed.
+**A. Decisions — two closed, one open.**
+1. ✅ **Pricing ladder** — resolved 2026-08-16 (§10.2). `ROADMAP.md` §5.4 rewritten.
+2. ✅ **Child-privacy scope** — COPPA in, FERPA out (§10.3); posture drafted in `ROADMAP.md` §5.6, awaiting a one-line sign-off. Sign-in providers settled there too: **email + Google + Sign in with Apple** (Apple being mandatory once Google ships on iOS, per App Store guideline 4.8).
+3. ⏳ **Backend stack and host — still open, and now the only thing blocking Slice 1.** The handoff shows Postgres and says "adapt to the actual stack"; there is no actual stack, so this is a genuinely free choice and should be made deliberately.
 
-Also unlisted but needed before Slice 1: **backend stack and host.** The handoff shows Postgres and says "adapt to the actual stack" — there is no actual stack. This is a genuinely free choice, so it should be made deliberately (managed Postgres + a small API, vs. a BaaS that supplies auth and row-level security out of the box and would collapse much of Slices 1 and 3).
+**On A3, the recommendation is a Postgres-backed BaaS (Supabase or equivalent) over a hand-rolled API**, for reasons specific to this project rather than general preference:
+
+- It supplies **Google and Apple sign-in as configuration**, and §5.6 now requires both. Building OIDC twice by hand is the single largest avoidable cost in Slice 1.
+- **Row-level security is exactly the tool §5.6 needs** — "an attribution row may never reference a child profile" and "a parent may read only their own children" become database policies, which is where that rule has to live to actually hold.
+- It is **real Postgres**, so handoff §5's schema — enums, `jsonb`, `citext`, partial unique indexes, the `(source_ref, affiliate_id)` idempotency guard — transfers essentially verbatim rather than being "adapted."
+- It provides a migration tool, so §7's missing DB-migration story arrives for free.
+- Serverless functions cover the Stripe webhook endpoint, which is the only server surface Slices 4 and 8 strictly need.
+
+The honest counterweight: it's a platform dependency in a codebase whose defining trait is **zero dependencies**. That tension is real, but it's confined to the new service — the existing static app stays dependency-free and simply calls an API. The alternative (managed Postgres + a small Node/Fastify service) buys full control at the cost of building auth, RLS equivalents, and migrations by hand, which is likely months rather than weeks for a solo operator.
 
 **B. Do the one thing that needs no decisions and no backend — now.**
 **Finish Slice 2.** It's ~70% built (§5), it's pure data + one lookup, it can't break anything, it's testable in the existing harness, and the handoff itself flags retrofitting it later as *"the most expensive mistake available in this project."* Concretely: a `data/translations.js` registry keyed by the strings already in use (`lds2013`, `kjv`, `bsb`), each with `label`, `is_public_domain`, `requires_entitlement`, `licensor`; a lookup in `js/00-content.js`; a `translations[]` array on the `seminary` track so the switcher isn't dead there; and a `tests/content.test.js` case proving a new translation is a data-only change. This also gives §5.2's *"All translations"* Quest+ tier something real to gate on.
@@ -288,8 +324,8 @@ The handoff's best advice is in §7: *"Slices 1–5 contain no affiliate logic. 
 | Order | Work | Note |
 |---|---|---|
 | 1 | **Slice 2** (finish translations) | Today. No decisions, no backend. |
-| 2 | *Decisions A1–A3* | Blocking. |
-| 3 | **Slice 1** (accounts) — *a new codebase* | Plan as a 0→1 backend, not a modification. Include the local-profile → real-account claim migration (`adoptGuestSave()` is the precedent). |
+| 2 | *Decision A3 — stack and host* | ⏳ The only thing still blocking Slice 1. |
+| 3 | **Slice 1** (accounts) — *a new codebase* | Plan as a 0→1 backend, not a modification. Three things belong in it that aren't in the handoff's Slice 1: the **parent/child account model** (§5.6), the **local-profile → real-account claim migration** (`adoptGuestSave()` is the precedent and the UX is already built), and **retiring the Daily Quest bridge** (§3). |
 | 4 | **Slice 3** (entitlement service) | Client half exists; server must become the authority, local value demoted to cache with offline fallback. |
 | 5 | **Slice 4** (Stripe web) | **Revenue starts here.** Stop and reassess before going further. |
 | 6 | *Native wrappers* — **not in the handoff's dependency table** | Capacitor iOS + Android. Prerequisite for Slice 5. Two store enrollments, two review cycles. |

@@ -41,7 +41,7 @@ Both tracks share every mechanic. Nothing in the game vocabulary is denomination
 
 | | Doctrinal Mastery (official) | The Bible Memory App | Bible Versus | Scripture Quest |
 |---|---|---|---|---|
-| Price | Free | $1.99/mo · $9.99 · $19.99 lifetime · $49.99/yr | Free + IAP | §6 |
+| Price | Free | $1.99/mo · $9.99 · $19.99 lifetime · $49.99/yr | Free + IAP | $8.99/mo · **$44.99/yr** · $139.99 lifetime — §5.4 |
 | Ratings | 4.3★ · 231 | 4.8★ · ~32,000 | New | — |
 | Languages | 37 | 15+ | — | 1 |
 | First-letter memorize | ✅ (slider) | ✅ (typing) | — | Stages 0–4 |
@@ -351,24 +351,25 @@ BibleMemory ranks two ways: total points, and **number of verses currently held*
 - No DMs. Preset encouragement only.
 - A visible opt-out that costs nothing.
 
-### 5.4 Pricing
+### 5.4 Pricing — ✅ **CONFIRMED 2026-08-16 (owner). Annual-first ladder.**
 
-BibleMemory's actual ladder, and yours applying "beat monthly by $1, lifetime by $20":
+> **This section was rewritten when the pricing ladder was confirmed.** The earlier draft proposed a $0.99/mo, $9.99-lifetime "undercut BibleMemory on every line" ladder. **That is superseded and must not be built.** The confirmed ladder below matches `CLAUDE-CODE-HANDOFF.md` §3.1, which is the single source of truth for money constants; if this table and that one ever disagree, that one wins and this one is stale.
 
-| Tier | BibleMemory | **Scripture Quest** | Delta |
-|---|---|---|---|
-| Monthly | $1.99 | **$0.99** | −$1.00 ✓ |
-| Yearly | $49.99 (Unlimited) | **$29.99** | −$20.00 ✓ |
-| One-time unlock | $9.99 (PRO) | **$8.99** | −$1.00 ✓ |
-| Lifetime | $19.99 | **$9.99** ⚠️ | −$10.00 |
-| AI tier, monthly | $5.99 (Bible Intelligence) | **$4.99** | −$1.00 ✓ |
+| Product | **Web (Stripe)** | **Native (iOS / Android)** |
+|---|---:|---:|
+| Free | $0 | $0 |
+| Pro Monthly | **$8.99** (`899`) | **$9.99** (`999`) |
+| Pro Annual | **$44.99** (`4499`) | **$49.99** (`4999`) |
+| Lifetime | **$139.99** (`13999`) | **not offered** |
 
-⚠️ **The lifetime rule doesn't survive arithmetic.** Their lifetime is only $19.99, so "beat it by $20" is $0.00. $9.99 is my recommendation because it preserves their *ratio* — BibleMemory's lifetime is 10× their monthly; $0.99 × 10 = $9.99 — so it reads as "half their price" rather than "broken." Your call; the number is a one-line constant.
+**The strategy is annual-first, and the monthly price is doing that job on purpose.** $44.99/yr is an effective **$3.75/month — 58% off** the monthly rate. Twelve months of monthly billing is $107.88, so annual saves $62.89. Monthly at $8.99 is not trying to be the cheap option; it is the price of *not committing*, and it funnels to annual. Native is deliberately priced above web so purchases route to the channel that can pay partners (see the affiliate handoff). **Do not "fix" either gap.**
 
-Two flags, stated once and then I'll build whatever you choose:
+Two consequences worth stating once, plainly:
 
-- **$0.99/month nets roughly $0.84** after Apple's 15% Small Business Program rate. Funding sync, speech, and cloud storage at that price needs real volume. The free-tier generosity in §5.2 is the stronger differentiator; consider holding monthly at $1.49 and spending the difference on being more generous than them.
-- **A $9.99 lifetime at $0.99/month pays back in 10 months**, which will cannibalize subscriptions hard. That's the same ratio BibleMemory runs, so it's not reckless — just know it's a lifetime-heavy revenue mix.
+- **The competitive framing in §1.2 is now dead.** BibleMemory is $1.99/mo. At $8.99 we are 4.5× their monthly — the annual line ($44.99 vs their $49.99) is the only one that undercuts them. Price is no longer the wedge, which means **§5.2's free tier is now the entire acquisition story.** Everything free in §5.2 should stay free, and the generosity there is load-bearing rather than merely nice.
+- **Lifetime at $139.99 is a 3.1-year payback** against annual. That is the right direction (it won't cannibalize subscriptions the way a $9.99 lifetime would) and it is what makes a 40% affiliate commission — $44.80 per lifetime referral — worth a partner's effort at all.
+
+**Still unconfirmed:** the AI-tier price (previously drafted at $4.99/mo) is out of scope until an AI tier exists. The **lifetime commission rate of 40%** is handoff §8 open item 1 — spec'd, not confirmed; it lives as one named constant.
 
 ### 5.5 Distribution — website + all app stores
 
@@ -379,6 +380,33 @@ One codebase, three surfaces:
 3. **iOS** — wrap with **Capacitor**, not a bare WebView. Apple guideline 4.2 rejects thin web wrappers; adding native speech, notifications, and StoreKit clears it.
 
 **Payments constraint that affects architecture:** Apple and Google require their own in-app purchase for digital goods. You cannot bill Stripe inside the iOS app. So the entitlement system must accept **three** receipt sources — StoreKit, Google Play Billing, and Stripe (web) — and resolve them to one server-side entitlement per account. **Design this before writing the paywall**, not after; retrofitting it is expensive. It also means accounts (T20) must exist before paid features ship, since an entitlement has to attach to something.
+
+### 5.6 Sign-in and COPPA posture — ✅ **scope set 2026-08-16 (owner); design below pending sign-off**
+
+**FERPA is out of scope**, by owner decision. One consequence worth knowing rather than discovering: that means **not** pursuing formal school-district procurement as a v1 channel, because districts will ask. It costs nothing here — **Classroom Mode (T18) is FERPA-free by construction**, since it runs entirely on the teacher's own device and never creates a student account or stores a student record. That was a good instinct and it should stay that way.
+
+**COPPA is in scope.** It applies to services directed to under-13s, or with actual knowledge of them, and it requires verifiable parental consent before collecting a child's personal information — plus sharp limits on behavioral tracking. Note the actual exposure: **seminary students are 14–18 and fall outside COPPA entirely.** The exposure is the family/kids track and any under-13 who signs up anyway.
+
+#### Sign-in providers — ship three
+
+| Provider | Verdict |
+|---|---|
+| **Email (passwordless link or password)** | **Required.** The universal fallback, and the only one that works cleanly for a parent creating child profiles. |
+| **Google** | **Recommended.** Highest-conversion option on Android and web. |
+| **Sign in with Apple** | **Required *because* of Google.** App Store Review Guideline 4.8: an iOS app offering any third-party or social sign-in must also offer Sign in with Apple. Ship Google on iOS and Apple stops being optional. |
+
+Sign in with Apple's **Hide My Email** is a COPPA *asset*, not a nuisance — it means less PII in the database by default.
+
+#### The posture: a parent-held account
+
+1. **Neutral age screen at signup** — ask for date of birth, not "are you over 13?", unprefilled, once.
+2. **Under-13 never gets their own account.** No credentials, no email, no social sign-in (Google and Apple accounts for under-13s are themselves parent-managed constructs). A **parent** creates the account; the child is a **profile under it**. The parent's account creation is the consent point, and a real card transaction is one of the FTC's accepted verifiable-consent mechanisms — so a paying parent has already cleared the bar.
+3. **A child profile holds no PII** — a display name drawn from the existing curated scripture-hero allowlist, plus progress. No email, no photo, no free text anywhere.
+4. **No behavioral tracking on a child profile, ever.** No affiliate click cookie, no IP hash, no attribution row. **Attribution attaches to the parent account only, and this must be enforced by the schema — a `NOT NULL` FK to an adult account — not by a line in a policy document.**
+5. **Leagues** — §5.3's rules already say under-13 defaults to family/class leagues only, display names only, no photos, no DMs, no free-text chat, free opt-out. That posture is already right; enforce it by the profile's age band rather than by user choice.
+6. **Deletion** — a parent can delete a child profile and everything attached to it, from the account screen, without contacting support.
+
+**This fits what already exists almost exactly.** `usernames.html` is already multi-profile-on-one-device, and it already draws display names from a curated hero allowlist with no free-text entry. The parent-held account is simply the server-side form of a thing this app already does — which is a strong signal it's the right shape rather than a compliance tax bolted on.
 
 ---
 
@@ -824,9 +852,9 @@ Accounts; **three receipt sources resolving to one entitlement** — StoreKit, G
 
 | # | Question | Blocks | Status |
 |---|---|---|---|
-| 1 | Pricing ladder — confirm §5.4, especially the lifetime number | T20 | ⏳ Lifetime rule needs your call; rest is set |
+| 1 | Pricing ladder — confirm §5.4, especially the lifetime number | T20 | ✅ **Resolved 2026-08-16 — annual-first ladder: $8.99/mo, $44.99/yr, $139.99 lifetime (web); native +$1/+$5, no lifetime.** §5.4 rewritten. Lifetime *commission rate* (40%) still open. |
 | 2 | Text sourcing — 1920/1921 editions, or seek permission for current text | T4 | ✅ **Resolved 2026-08-11 — current editions, owner confirmed usable.** Diff run: 82/100 exact, 18 in data/TEXT-REVIEW.md |
-| 3 | COPPA / FERPA posture for under-13 accounts and class rosters | T17, T20 | ⏳ Needs a documented answer before any backend |
+| 3 | COPPA / FERPA posture for under-13 accounts and class rosters | T17, T20 | ⚠️ **Scope set 2026-08-16 — FERPA out, COPPA in.** Posture drafted in §5.6 (parent-held account; child profiles hold no PII; attribution never attaches to a child). **Needs a one-line owner sign-off, and counsel review before a paid launch** — see decision 4. |
 | 4 | Legal review of the public-domain reasoning before a *paid* launch | Paid launch | ⏳ Not a blocker for building |
 | 5 | Custom tower art kit — one plain "pioneer tower," or several | T11 | ⏳ You said you'd design these |
 
