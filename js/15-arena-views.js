@@ -37,6 +37,7 @@ function renderTrials(){
 function renderArenaSetup(){
   const body = document.getElementById("body");
   const a = ensureArena();
+  const hasKeyPhrases = phrasePassages(activePassages()).length > 0;
   const campaigns = activeCampaigns().filter(c=>c.passageIds.length);
   const due = dueReviews().length;
   const campaignLabel = a.filters.campaigns.length===campaigns.length
@@ -136,6 +137,12 @@ function renderArenaSetup(){
           </div>` : ""}
         </div>
         <div class="af-active-line" style="margin:12px 0 0;">Practicing: <strong>${escHTML(statusLabel)}</strong> · <strong>${escHTML(campaignLabel)}</strong> · difficulty <strong>${ARENA_DIFF[a.difficulty].label}</strong></div>
+      </div>
+
+      <div class="arena-card classroom-tease" style="margin-bottom:16px;">
+        <h4>🏫 Classroom Mode</h4>
+        <p>Project a live team review for a group — big type, keyboard-driven, no login, ready in seconds.</p>
+        <button class="btn primary" id="arenaClassroom">Start a class review ▸</button>
       </div>
 
       <div class="arena-card" style="margin-bottom:16px; text-align:left;">
@@ -253,6 +260,7 @@ function renderArenaSetup(){
     if(!view.trialRound.qs.length){ showToast("No scriptures match your filters yet."); view.trialRound = null; return; }
     renderTrials(); window.scrollTo({top:0});
   };
+  document.getElementById("arenaClassroom").onclick = ()=>{ SFX.pick(); openClassroom(); };
   if(hasKeyPhrases){
     document.getElementById("phraseToRef").onclick = ()=> startPhraseDrill("phraseToRef");
     document.getElementById("refToPhrase").onclick = ()=> startPhraseDrill("refToPhrase");
