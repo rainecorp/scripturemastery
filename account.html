@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Scripture Quest Account</title>
+<style>
+  :root{
+    --bg:#161129; --panel:#221a3e; --panel2:#2c2352; --ink:#f3eeff; --dim:#a89cc8;
+    --gold:#f5c04a; --gold2:#ffdf8e; --green:#5dd39e; --red:#ff7a7a;
+    --card:#2a2150; --line:#3a2f66; --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:-apple-system,"Segoe UI",Roboto,sans-serif; background:
+    radial-gradient(1200px 600px at 50% -10%, #2d2158 0%, var(--bg) 60%);
+    color:var(--ink); min-height:100vh;}
+  .wrap{max-width:480px; margin:0 auto; padding:20px 16px 60px;}
+  h1{font-size:22px; text-align:center; letter-spacing:.5px; margin:10px 0 2px; color:var(--gold2);}
+  .sub{text-align:center; color:var(--dim); font-size:13px; margin:0 0 20px; line-height:1.5;}
+  .stepTitle{font-size:17px; font-weight:700; margin:18px 0 4px; text-align:center;}
+  .stepSub{color:var(--dim); font-size:13px; text-align:center; margin:0 0 14px;}
+  .bigbtn{display:block; width:100%; text-align:left; background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin:10px 0; cursor:pointer;
+    color:var(--ink); box-shadow:var(--shadow); transition:transform .08s;}
+  .bigbtn:active{transform:scale(.98);}
+  .bigbtn .t{font-size:16px; font-weight:800; color:var(--gold2);}
+  .bigbtn .d{font-size:13px; color:var(--dim); margin-top:3px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;
+    cursor:pointer; text-align:center; transition:transform .08s;}
+  .card:active{transform:scale(.96);}
+  .card .nm{font-weight:800; font-size:15px;}
+  .card .ds{font-size:11.5px; color:var(--dim); margin-top:3px; line-height:1.35;}
+  .preview{font-size:22px; font-weight:900; text-align:center; color:var(--gold);
+    background:var(--panel); border:2px solid var(--gold); border-radius:16px; padding:22px 10px; margin:16px 0;
+    word-break:break-word; box-shadow:0 0 30px rgba(245,192,74,.15);}
+  .cta{display:block; width:100%; border:none; border-radius:14px; padding:15px; font-size:16px; font-weight:800;
+    cursor:pointer; margin:8px 0; background:linear-gradient(180deg,var(--gold2),var(--gold)); color:#3a2a00;}
+  .cta.ghost{background:none; border:1px solid var(--line); color:var(--dim); font-weight:600;}
+  .cta.google{background:#fff; color:#3c4043;}
+  .cta:disabled{opacity:.5; cursor:default;}
+  .back{color:var(--dim); font-size:13px; cursor:pointer; text-align:center; margin:14px 0 0; user-select:none;}
+  .story{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-size:13px; color:var(--dim); line-height:1.5; margin:12px 0;}
+  .story b{color:var(--ink);}
+  .err{color:var(--red); font-size:13px; text-align:center; margin:8px 0;}
+  .ok{color:var(--green); font-size:13px; text-align:center; margin:8px 0;}
+  .field{margin:12px 0;}
+  .field label{display:block; font-size:12.5px; color:var(--dim); margin:0 0 5px; font-weight:700;}
+  .field input{width:100%; padding:13px 14px; border-radius:12px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font-size:15px;}
+  .field input:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .divider{display:flex; align-items:center; gap:10px; color:var(--dim); font-size:12px; margin:18px 0;}
+  .divider::before,.divider::after{content:""; flex:1; height:1px; background:var(--line);}
+  .topnav{display:flex; justify-content:center; gap:18px; font-size:13px; color:var(--dim); margin-bottom:6px;}
+  .topnav span{cursor:pointer;}
+  .topnav span.on{color:var(--gold2); font-weight:700;}
+  .profRow{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+    border-radius:14px; padding:12px 14px; margin:8px 0;}
+  .profRow .av{font-size:26px;}
+  .profRow .un{font-weight:800; font-size:16px;}
+  .profRow .hi{font-size:12px; color:var(--dim); text-transform:capitalize;}
+  .profRow .play{margin-left:auto; border:none; border-radius:10px; padding:9px 14px; font-weight:800;
+    font-size:13px; cursor:pointer; background:linear-gradient(180deg,var(--gold2),var(--gold)); color:#3a2a00;}
+  .profRow .edit{border:none; background:none; color:var(--dim); font-size:15px; cursor:pointer; padding:6px;}
+  .notice{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px;
+    font-size:13.5px; color:var(--dim); line-height:1.6; text-align:center;}
+  .notice code{background:rgba(0,0,0,.3); padding:1px 5px; border-radius:5px; color:var(--gold2);}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<!-- Supabase JS UMD build. Must load before js/29-accounts.js, which reads
+     window.supabase.createClient() at parse time. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/29-accounts.js"></script>
+<script>
+/* ============ Curated hero allowlist (verbatim from the old
+   usernames.html, ROADMAP.md §5.6's "no free text for a child profile"
+   rule) ============
+   Only id/coll/name/desc/story are used below; token/traits/likes/titles/
+   symbols are carried over unused rather than hand-trimmed, to avoid
+   transcription mistakes copying 34 entries out of the original file. */
+const COLLECTIONS = [
+  {id:"book_of_mormon", label:"Book of Mormon", desc:"Prophets, missionaries, faithful women, and courageous leaders."},
+  {id:"old_testament", label:"Old Testament", desc:"Prophets, judges, queens, families, and people of great faith."},
+  {id:"new_testament", label:"New Testament", desc:"Apostles, missionaries, disciples, and followers of Jesus Christ."},
+  {id:"any", label:"Any Book", desc:"Explore approved scripture heroes from every collection."}
+];
+function H(id,coll,name,token,desc,story,traits,likes,titles,symbols){
+  return {id,coll,name,token,desc,story,traits,likes,titles,symbols};
+}
+const HEROES = [
+ H("bom_nephi","book_of_mormon","Nephi","Nephi","Willing and faithful",
+   "Nephi trusted the Lord, obeyed hard instructions, and built a ship to carry his family to safety. (1 Nephi 3:7)"),
+ H("bom_sariah","book_of_mormon","Sariah","Sariah","Faithful mother in the wilderness",
+   "Sariah left her home in faith and learned for herself that the Lord guides families. (1 Nephi 5)"),
+ H("bom_abish","book_of_mormon","Abish","Abish","Brave believer and messenger",
+   "Abish recognized the power of God and bravely gathered others to see what was happening. (Alma 19)"),
+ H("bom_enos","book_of_mormon","Enos","Enos","Sought the Lord in prayer",
+   "Enos prayed all day and into the night, and the Lord heard him and forgave him. (Enos 1)"),
+ H("bom_benjamin","book_of_mormon","King Benjamin","KingBenjamin","Servant king and teacher",
+   "King Benjamin worked with his own hands and taught that serving others is serving God. (Mosiah 2:17)"),
+ H("bom_abinadi","book_of_mormon","Abinadi","Abinadi","Fearless witness of truth",
+   "Abinadi bravely taught the truth even when it was dangerous, and his words changed Alma's heart. (Mosiah 11–17)"),
+ H("bom_ammon","book_of_mormon","Ammon","Ammon","Mighty missionary and servant",
+   "Ammon served King Lamoni first, protected his flocks, and then taught him about God. (Alma 17–19)"),
+ H("bom_alma_younger","book_of_mormon","Alma the Younger","AlmaYounger","A changed heart, a lifetime of teaching",
+   "Alma turned his life around and spent the rest of it helping others come to Christ. (Mosiah 27, Alma 36)"),
+ H("bom_amulek","book_of_mormon","Amulek","Amulek","Second witness, loyal friend",
+   "Amulek stood beside Alma and testified with him, even when it cost him everything. (Alma 8–14)"),
+ H("bom_capt_moroni","book_of_mormon","Captain Moroni","CaptainMoroni","Defender of faith and freedom",
+   "Captain Moroni raised the Title of Liberty and prepared his people to defend their families and faith. (Alma 46)"),
+ H("bom_helaman","book_of_mormon","Helaman","Helaman","Leader of the young warriors",
+   "Helaman led 2,060 faithful young men who trusted what their mothers taught them. (Alma 56–57)"),
+ H("bom_shiblon","book_of_mormon","Shiblon","Shiblon","Steady and true",
+   "Shiblon was steady, patient, and faithful — his father trusted him completely. (Alma 38)"),
+ H("bom_pahoran","book_of_mormon","Pahoran","Pahoran","Patient peacemaker",
+   "When Pahoran was wrongly accused, he answered with kindness instead of anger. (Alma 61)"),
+ H("bom_samuel_lam","book_of_mormon","Samuel the Lamanite","SamuelLamanite","Prophet on the wall",
+   "Samuel stood on the city wall and bravely delivered the message God gave him. (Helaman 13–16)"),
+ H("bom_mormon","book_of_mormon","Mormon","Mormon","Faithful record keeper",
+   "Mormon stayed faithful his whole life and gathered the records that became the Book of Mormon. (Mormon 1–8)"),
+ H("bom_moroni","book_of_mormon","Moroni","Moroni","Finished the record alone",
+   "Moroni kept the faith even when he was the last one left, and promised we can know truth by asking God. (Moroni 10)"),
+ H("ot_ruth","old_testament","Ruth","Ruth","Loyal and kind",
+   "Ruth stayed with Naomi and served her faithfully: 'Whither thou goest, I will go.' (Ruth 1:16)"),
+ H("ot_esther","old_testament","Esther","Esther","Brave queen",
+   "Queen Esther risked her life to save her people: 'If I perish, I perish.' (Esther 4)"),
+ H("ot_daniel","old_testament","Daniel","Daniel","Faithful no matter what",
+   "Daniel kept praying even when it was against the law, and God protected him in the lions' den. (Daniel 6)"),
+ H("ot_deborah","old_testament","Deborah","Deborah","Wise judge and leader",
+   "Deborah judged Israel with wisdom and courage, and led her people to victory. (Judges 4–5)"),
+ H("ot_moses","old_testament","Moses","Moses","Led Israel to freedom",
+   "Moses trusted God, faced Pharaoh, and led his people through the Red Sea. (Exodus 14)"),
+ H("ot_joshua","old_testament","Joshua","Joshua","Strong and courageous",
+   "Joshua chose to serve the Lord: 'As for me and my house, we will serve the Lord.' (Joshua 24:15)"),
+ H("ot_hannah","old_testament","Hannah","Hannah","Prayed with all her heart",
+   "Hannah poured out her heart to God, and He heard her prayer. (1 Samuel 1)"),
+ H("ot_joseph","old_testament","Joseph of Egypt","JosephEgypt","Forgave and saved his family",
+   "Joseph stayed true through hard years, and forgave the brothers who wronged him. (Genesis 37–45)"),
+ H("ot_samuel","old_testament","Samuel","SamuelProphet","Listened and answered",
+   "Young Samuel heard the Lord call his name and answered, 'Speak; for thy servant heareth.' (1 Samuel 3)"),
+ H("nt_peter","new_testament","Peter","Peter","The rock of faith",
+   "Peter left his nets to follow Jesus and became a bold leader of the Church. (Matthew 4:18–20)"),
+ H("nt_paul","new_testament","Paul","Paul","Changed heart, tireless missionary",
+   "Paul's heart changed completely, and he spent his life sharing the gospel everywhere. (Acts 9)"),
+ H("nt_barnabas","new_testament","Barnabas","Barnabas","The encourager",
+   "Barnabas means 'son of encouragement' — he gave generously and stood up for new believers. (Acts 4, 9)"),
+ H("nt_lydia","new_testament","Lydia","Lydia","Open heart, open home",
+   "Lydia listened, believed, and opened her home to the missionaries. (Acts 16)"),
+ H("nt_tabitha","new_testament","Tabitha","Tabitha","Full of good works",
+   "Tabitha spent her days sewing clothes and caring for those in need. (Acts 9:36)"),
+ H("nt_stephen","new_testament","Stephen","Stephen","Faithful witness",
+   "Stephen was full of faith and stood as a true witness to the very end. (Acts 6–7)"),
+ H("nt_timothy","new_testament","Timothy","Timothy","Young and true",
+   "Timothy learned the scriptures from childhood and became a trusted young leader. (2 Timothy 1:5)"),
+ H("nt_mary_mag","new_testament","Mary Magdalene","MaryMagdalene","First at the tomb",
+   "Mary Magdalene followed Jesus faithfully and was the first to see the risen Lord. (John 20)"),
+ H("nt_john_baptist","new_testament","John the Baptist","JohnBaptist","Prepared the way",
+   "John the Baptist prepared the way for the Savior and baptized Him in the Jordan. (Matthew 3)")
+];
+function heroesFor(collId){ return collId==="any" ? HEROES : HEROES.filter(h=>h.coll===collId); }
+
+/* ============ App state ============ */
+const app = document.getElementById("app");
+const CLAIMING = new URLSearchParams(location.search).has("claim");
+let S = { screen:"loading", mode:"signin", email:"", err:"", busy:false, profiles:[], addColl:null, addHero:null, renaming:null };
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function go(patch){ Object.assign(S, {err:""}, patch); render(); }
+
+async function boot(){
+  if(!Accounts.configured()){ S.screen = "unconfigured"; render(); return; }
+  const session = await Accounts.session();
+  if(session){ await loadProfiles(); S.screen = "profiles"; }
+  else { S.screen = "auth"; }
+  render();
+  Accounts.onAuthChange(async (sess)=>{
+    if(sess && S.screen === "auth"){ await loadProfiles(); go({screen:"profiles"}); }
+    if(!sess && S.screen !== "auth" && S.screen !== "unconfigured"){ go({screen:"auth", profiles:[]}); }
+  });
+}
+async function loadProfiles(){ S.profiles = await Accounts.listProfiles(); }
+
+/* ---- auth screen ---- */
+async function submitAuth(e){
+  e.preventDefault();
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  /* S.email survives across the re-renders below, since render() rebuilds
+     the form from scratch on every call (a fresh <input> with no memory of
+     what was typed) — without this, a failed sign-in wiped both fields, not
+     just the password, forcing a full retype. Found by driving this
+     function directly in a browser QA pass rather than only reading it. */
+  S.email = email;
+  if(!email || !password){ go({err:"Enter an email and password."}); return; }
+  S.busy = true; render();
+  try{
+    if(S.mode === "signup") await Accounts.signUpWithEmail(email, password);
+    else await Accounts.signInWithEmail(email, password);
+    await loadProfiles();
+    go({screen:"profiles", busy:false});
+  }catch(err){
+    go({busy:false, err: (err && err.message) || "Something went wrong. Try again."});
+  }
+}
+async function withGoogle(){
+  S.busy = true; render();
+  try{ await Accounts.signInWithGoogle(); }
+  catch(err){ go({busy:false, err:(err && err.message) || "Google sign-in failed."}); }
+}
+async function doSignOut(){ await Accounts.signOut(); go({screen:"auth", profiles:[]}); }
+
+/* ---- profiles ---- */
+function playAs(profileId){
+  const p = S.profiles.find(x=>x.id===profileId);
+  if(!p) return;
+  if(CLAIMING) claimGuestSaveFor(p.display_name);
+  enterTowerAs(p.display_name);
+}
+function startRename(profileId){ go({renaming:profileId}); }
+async function saveRename(profileId){
+  const val = document.getElementById("renameInput").value.trim().slice(0,40);
+  if(!val){ go({renaming:null}); return; }
+  S.busy = true; render();
+  try{ await Accounts.renameProfile(profileId, val); await loadProfiles(); go({renaming:null, busy:false}); }
+  catch(err){ go({busy:false, err:(err && err.message) || "Couldn't rename that."}); }
+}
+
+/* ---- add child profile ---- */
+function dedupeName(name){
+  const taken = new Set(S.profiles.map(p=>p.display_name));
+  if(!taken.has(name)) return name;
+  let n = 2;
+  while(taken.has(name + " " + n)) n++;
+  return name + " " + n;
+}
+async function confirmAddChild(){
+  const hero = S.addHero;
+  S.busy = true; render();
+  try{
+    await Accounts.addChildProfile(hero.id, dedupeName(hero.name));
+    await loadProfiles();
+    go({screen:"profiles", addColl:null, addHero:null, busy:false});
+  }catch(err){
+    go({busy:false, err:(err && err.message) || "Couldn't add that profile."});
+  }
+}
+
+/* ============ render ============ */
+function render(){
+  const s = S.screen;
+  let html = `<h1>⚔️ Scripture Quest</h1>`;
+
+  if(s === "unconfigured"){
+    html += `<div class="notice">Accounts aren't set up yet on this copy of the app.<br><br>
+      This screen needs a Supabase project connected in <code>js/29-accounts.js</code>.
+      See <code>supabase/README.md</code> for setup steps.</div>
+      <div class="back" onclick="location.href='index.html'">◂ Back to the app</div>`;
+    app.innerHTML = html; return;
+  }
+
+  if(s === "auth"){
+    html += `<p class="sub">${CLAIMING
+      ? "Sign in or create an account to save your progress under your own name."
+      : "Sign in, or create an account to play across devices."}</p>
+      <div class="topnav">
+        <span class="${S.mode==='signin'?'on':''}" onclick="go({mode:'signin'})">Sign In</span>
+        <span class="${S.mode==='signup'?'on':''}" onclick="go({mode:'signup'})">Create Account</span>
+      </div>
+      <form onsubmit="submitAuth(event)">
+        <div class="field"><label>Email</label><input id="authEmail" type="email" autocomplete="email" value="${esc(S.email)}" required></div>
+        <div class="field"><label>Password</label><input id="authPassword" type="password"
+          autocomplete="${S.mode==='signup'?'new-password':'current-password'}" minlength="6" required></div>
+        ${S.err?`<div class="err">${esc(S.err)}</div>`:""}
+        <button class="cta" type="submit" ${S.busy?"disabled":""}>${S.mode==='signup'?'Create account ▸':'Sign in ▸'}</button>
+      </form>
+      <div class="divider">or</div>
+      <button class="cta google" ${S.busy?"disabled":""} onclick="withGoogle()">Continue with Google</button>
+      <div class="back" onclick="location.href='index.html'">◂ Back</div>`;
+  }
+
+  else if(s === "profiles"){
+    const single = S.profiles.length === 1;
+    html += `<p class="sub">Who's climbing today?</p>`;
+    S.profiles.forEach(p=>{
+      const hero = p.hero_id ? HEROES.find(h=>h.id===p.hero_id) : null;
+      if(S.renaming === p.id){
+        html += `<div class="profRow"><div class="av">${p.kind==='child'?'🛡️':'👤'}</div>
+          <input id="renameInput" value="${esc(p.display_name)}" maxlength="40" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);">
+          <button class="play" onclick="saveRename('${p.id}')">Save</button></div>`;
+      } else {
+        html += `<div class="profRow"><div class="av">${p.kind==='child'?'🛡️':'👤'}</div>
+          <div><div class="un">${esc(p.display_name)}</div><div class="hi">${p.kind}${hero?" · "+esc(hero.desc):""}</div></div>
+          <button class="edit" title="Rename" onclick="startRename('${p.id}')">✏️</button>
+          <button class="play" onclick="playAs('${p.id}')">Play ▸</button></div>`;
+      }
+    });
+    if(S.err) html += `<div class="err">${esc(S.err)}</div>`;
+    html += `<button class="bigbtn" onclick="go({screen:'addChildCollection'})"><div class="t">➕ Add a child profile</div>
+      <div class="d">A scripture-hero name, no personal information — for a young climber sharing this account.</div></button>
+      <div class="back" onclick="doSignOut()">Sign out</div>`;
+  }
+
+  else if(s === "addChildCollection"){
+    html += `<div class="stepTitle">Choose a book of scripture</div>`;
+    COLLECTIONS.forEach(c=>{
+      html += `<button class="bigbtn" onclick='go({screen:"addChildHero",addColl:"${c.id}"})'><div class="t">${c.label}</div><div class="d">${c.desc}</div></button>`;
+    });
+    html += `<div class="back" onclick="go({screen:'profiles'})">◂ Back</div>`;
+  }
+
+  else if(s === "addChildHero"){
+    html += `<div class="stepTitle">Choose a scripture hero</div><div class="grid">`;
+    heroesFor(S.addColl).forEach(h=>{
+      html += `<div class="card" onclick='go({screen:"addChildConfirm",addHero:${JSON.stringify(h).replace(/'/g,"&#39;")}})'>
+        <div class="nm">${esc(h.name)}</div><div class="ds">${esc(h.desc)}</div></div>`;
+    });
+    html += `</div><div class="back" onclick="go({screen:'addChildCollection'})">◂ Back</div>`;
+  }
+
+  else if(s === "addChildConfirm"){
+    const h = S.addHero;
+    html += `<div class="stepTitle">Add ${esc(h.name)}?</div>
+      <div class="preview">${esc(dedupeName(h.name))}</div>
+      <div class="story"><b>${esc(h.name)}</b> — ${esc(h.story)}</div>
+      ${S.err?`<div class="err">${esc(S.err)}</div>`:""}
+      <button class="cta" ${S.busy?"disabled":""} onclick="confirmAddChild()">Add this profile ▸</button>
+      <div class="back" onclick="go({screen:'addChildHero'})">◂ Choose another hero</div>`;
+  }
+
+  else { html += `<p class="sub">Loading…</p>`; }
+
+  app.innerHTML = html;
+}
+
+render();
+boot();
+</script>
+</body>
+</html>

@@ -1,16 +1,19 @@
 /* 25-bridge.js
-   username-system bridge (usernames.html)
-   Extracted verbatim from index.html lines 6918-6981 by T2. */
+   account bridge (account.html)
+   Extracted verbatim from index.html lines 6918-6981 by T2; repointed from
+   usernames.html's local PIN-based profiles to real accounts by Billing
+   Slice 1. usernames.html is retired — nothing else in the app referenced
+   it once this file stopped pointing at it. */
 /* =========================================================
-   Username-system bridge (usernames.html)
+   Account bridge (account.html)
    - New visitor (no climber, no save, hasn't chosen guest):
-     welcome gate → create a username or continue as guest.
+     welcome gate → sign in / create an account, or continue as guest.
    - Guest with progress: floating "Save your progress" pill →
-     usernames.html?claim=1 (creates a profile and adopts the
-     guest save under it).
+     account.html?claim=1 (after auth, moves the guest save under
+     whichever profile is chosen — see js/29-accounts.js).
    ========================================================= */
 (function(){
-  const USERNAMES_URL = "usernames.html";
+  const ACCOUNT_URL = "account.html";
   if(CLIMBER) return; // signed in — nothing to do
   const hasGuestSave = HAD_SAVE_AT_BOOT;
   const guestOk = localStorage.getItem("sq_guestOk") === "1";
@@ -34,12 +37,12 @@
       </style>
       <div class="gcard">
         <h2>⚔️ Welcome, climber!</h2>
-        <p>Pick a scripture-hero username so your climb is saved under your own name — or just start exploring.</p>
-        <button class="gbtn" id="gateCreate">✨ Choose my scripture username</button>
+        <p>Create an account so your climb is saved under your own name and follows you to other devices — or just start exploring as a guest.</p>
+        <button class="gbtn" id="gateCreate">✨ Sign in / create an account</button>
         <button class="gbtn ghost" id="gateGuest">Continue as guest</button>
       </div>`;
     document.body.appendChild(gate);
-    document.getElementById("gateCreate").onclick = ()=>{ location.href = USERNAMES_URL; };
+    document.getElementById("gateCreate").onclick = ()=>{ location.href = ACCOUNT_URL; };
     document.getElementById("gateGuest").onclick = ()=>{
       localStorage.setItem("sq_guestOk","1");
       gate.remove();
@@ -74,7 +77,7 @@
         body:has(.cer.show) #savePill{ display:none; }
       </style>
       💾 Save your progress`;
-    pill.onclick = ()=>{ location.href = USERNAMES_URL + "?claim=1"; };
+    pill.onclick = ()=>{ location.href = ACCOUNT_URL + "?claim=1"; };
     document.body.appendChild(pill);
   }
 })();

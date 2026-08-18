@@ -21,7 +21,7 @@ const CLIMBER = (function(){
     const dq = JSON.parse(localStorage.getItem("dailyUnlocks_v1"));
     if(dq && dq.selectedProfile) return dq.selectedProfile;
   }catch(e){}
-  // profile chosen earlier via usernames.html (persists across visits)
+  // profile chosen earlier via account.html (persists across visits)
   try{
     const a = localStorage.getItem("sq_activeClimber");
     if(a && a.trim()) return a.trim();
